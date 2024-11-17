@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using DeadlockDemo = DemoFile.Game.Deadlock;
 
@@ -399,11 +398,14 @@ namespace DeadlockDemoResearch
       ///      unlike PreGameWait's GameStartTime which zeroes at game tick 0
       /// - While players are connecting (before the PreGameWait "Game Starting..." countdown), 
       ///   this clock may just randomly decide to reset back to 00:00 (via a "Source1 Legacy MatchClock" event).
-      /// - After all these resets, the clock follows the pattern that GameClockTime would follow (pauses and unpauses),
+      /// - After all these resets, the clock sort of follows the pattern that GameClockTime would follow (pauses and unpauses),
       ///   but of course now it's been zeroed out at the wrong time / started this pattern at the wrong time
+      ///    - if the clock didn't decide to randomly reset itself before PreGameWait, it might actually
+      ///      reach the first pause earlier than expected (e.g., jump from 5:28 to the first pause at 5:40),
+      ///      as if it was aligned to a zero *earlier* than game tick 0
       /// 
-      /// Beware that, though the clock is right, the timeline slider itself is unrelatedly, annoyingly offset 
-      /// a bit each time you click/drag it to seek (as seen by the top clock being wrong).
+      /// Beware that, though the clock by the timeline is right, the timeline slider itself is unrelatedly, 
+      /// annoyingly offset by a few pixels each time you click/drag it to seek (as seen by the resulting seeked time being different).
       public required float ReplayClockTime { get; init; }
 
       /// <summary>
@@ -777,6 +779,50 @@ namespace DeadlockDemoResearch
       if (rules == null || rules.PreGameConstants == null) throw new Exception(nameof(rules));
       if (!serverInfoReceived) Console.WriteLine($"Warning: no server info?");
 
+      {
+        if (matchClockEvents.Any(e => e.ev.GameEventName != "match_clock")) throw new Exception(nameof(matchClockEvents));
+
+        var numZeroMatchClocks = matchClockEvents.TakeWhile(e => e.ev.MatchTime == 0).Count();
+        if (matchClockEvents.Take(numZeroMatchClocks).Any(e => e.ev.Paused)) throw new Exception(nameof(numZeroMatchClocks));
+
+        var replayZeroGameTick =
+          numZeroMatchClocks == 0
+          ? frames.First().GameTick
+          : frames.Single(f => f.iFrame == matchClockEvents[numZeroMatchClocks - 1].iFrame).GameTick;
+        var gameZeroGameTick = rules.VariableHistory.First(f => f.variables.GameState == ERulesPermittedGameState.PreGameWait).gameTick;
+        var switchToInProgressGameTick = rules.VariableHistory.First(f => f.variables.GameState == ERulesPermittedGameState.GameInProgress).gameTick;
+
+        foreach ((var matchClockEvent, var rulesVariables) in 
+          matchClockEvents.Skip(numZeroMatchClocks)
+          .Zip(
+            rules.VariableHistory
+            .SkipWhile(f => f.variables.GameState == ERulesPermittedGameState.WaitingForPlayersToJoin)
+            .Skip(1)
+            .Where(f =>
+              f.gameTick != switchToInProgressGameTick
+              && f.variables.PauseState != EPauseState.UnpausingCountdown
+            )
+          )
+        )
+        {
+          if (
+            (!matchClockEvent.ev.Paused) != (rulesVariables.variables.PauseState == EPauseState.Unpaused)
+            || !rulesVariables.newMatchClock.HasValue
+            || matchClockEvent.ev.MatchTime != rulesVariables.newMatchClock.Value
+            || (
+              numZeroMatchClocks > 0
+              && (
+                Math.Abs(
+                  (int)(frames.Single(f => f.iFrame == matchClockEvent.iFrame).GameTick - replayZeroGameTick)
+                  - (int)(rulesVariables.gameTick - gameZeroGameTick)
+                )
+                > 4
+              )
+            )
+          ) throw new Exception(nameof(matchClockEvent));
+        }
+      }
+
       const int replayViewerTimelinePixels = 960;
       const int replayViewerTimelineSliderWidthPixels = 6;
       const int replayViewerTimelineSeekPixelOffset = -(replayViewerTimelineSliderWidthPixels / 2);
@@ -845,7 +891,7 @@ namespace DeadlockDemoResearch
               matchClockEvents
               .SelectMany(e => new[]
               {
-                $" - {e.ev.GameEventName} {e.ev.MatchTime} {(e.ev.Paused ? "Paused" : "Unpaused")}",
+                $" - {e.ev.MatchTime} {(e.ev.Paused ? "Paused" : "Unpaused")}",
                 $"   - {frames.Single(f => f.iFrame == e.iFrame)}",
               })
             )
