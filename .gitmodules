@@ -1,0 +1,3 @@
+[submodule "demofile-net"]
+	path = demofile-net
+	url = git@github.com:saul/demofile-net.git

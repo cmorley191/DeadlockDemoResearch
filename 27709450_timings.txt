@@ -1,0 +1,341 @@
+FIGURED IT OUT. (maybe? gotta test more but bz2 streaming aint workin)
+the replay clock is tracking SOURCE 1 MATCH CLOCK EVENTS ?!
+which explains why the clock starts at a weird time.
+Presumably if there are no events, it's starting counting after the
+sync tick? 
+(I can't see why else the replay had 2 seconds less than GameStartTime)
+i'll still want to figure out how to calculate the click offset
+ for seeking on the replay timeline too
+
+27709450 notes
+Y-GG-BB-P
+1 Pocket
+2 MoAndKrill
+3 Abrams
+4 Warden
+5 Infernus
+6 Paradox
+7 Seven
+8 Wraith
+9 Haze
+10 Lash
+11 Kelvin
+12 Viscous
+
+Replay Viewer: (Deadlock 19.19.39.03)
+framerate = ~0.017 per frame (60fps?)
+ - 02:48.588 Loading screen
+ - 02:50.759 Partial UI, including matchId
+ - 02:53.009 Mouse Captured
+ - 02:53.111 Full UI
+ - 02:53.156 World
+ - 02:53.185 A connecting
+ - 02:53.232 S,S connecting
+ - 02:53.258 A connecting
+ - 02:53.295 S connecting
+ - 02:53.357 A,S,S connecting
+ - 02:53.398 S connecting
+ - 02:53.488 A,A connecting
+ - 02:54.291 2 connected
+ - 02:54.825 4 connected
+ - 02:54.875 12 connected
+ - 02:54.975 11 connected
+ - 02:55.226 10 connected
+ - 02:55.627 1 connected
+ - 02:55.777 9 connected
+ - 02:55.978 7 connected
+ - 02:56.278 8 connected
+ - 02:56.478 2 hero
+ - 02:56.679 4,12 hero
+ - 02:56.913 3 connected
+ - 02:57.119 1 hero
+ - 02:57.382 9 hero
+ - 02:57.632 6 connected
+ - 02:57.783 11 hero
+ - 02:58.411 teleport to lobby, focused on 12
+ - 02:58.475 2 health
+ - 02:58.981 4,12 health
+ - 02:58.997 10 hero
+ - 02:59.064 8 hero
+ - 02:59.158 7 hero
+ - 02:59.309 1 health
+ - 02:59.559 9 health
+ - 02:59.927 6 hero
+ - 02:59.977 11 health
+ - 03:00.311 3 hero
+ - 03:00.695 focus on 8
+ - 03:01.050 3,7,8,10 health
+ - 03:07.990 5 connecting
+ - 03:39.335 5 connected
+ - 03:43.593 5 hero
+ - 03:45.196 5 health, "Game is Paused", top clock 0:25
+ - 03:45.981 "Game Starting... 9"
+ - 03:46.198 "Game Starting... -> 8"
+ - 03:47.317 top clock 0:26
+ - 03:47.918 "Game Starting... -> 7"
+ - 03:48.318 top clock 0:27
+ - 03:48.920 "Game Starting... -> 6"
+ - 03:49.320 top clock 0:28
+ - 03:49.922 "Game Starting... -> 5"
+ - 03:50.289 top clock 0:29
+ - 03:50.924 "Game Starting... -> 4"
+ - 03:51.291 top clock 0:30
+ - 03:51.926 "Game Starting... -> 3"
+ - 03:52.293 top clock 0:31
+ - 03:52.928 "Game Starting... -> 2"
+ - 03:53.312 top clock 0:32
+ - 03:53.930 "Game Starting... -> 1"
+ - 03:54.297 top clock 0:33
+ - 03:54.932 "Game Starting... -> 0"
+ - 03:55.199- teleporting and ui stuff
+ - 03:55.316 top clock 0:34
+ - 03:56.301 top clock 0:35
+ - 03:57.320 top clock 0:36
+ - 03:58.322 top clock 0:37
+ -   break
+ - 04:03.300 top clock 0:42
+ - 04:03.934 timeline pointer 0:41->0:43
+ - 04:04.302 top clock 0:43
+ - 04:05.287 top clock 0:44
+ - 04:05.788 chat "Fickle Frog" (top clock 0:44)
+ - 04:06.289 top clock 0:45
+ - 04:07.292 top clock 0:46
+ - 04:07.792 timeline pointer 0:43->0:45
+ - 04:08.293 top clock 0:47
+ - 04:09.296 top clock 0:48
+ - 04:10.281 top clock 0:49
+ - 04:10.932 pause icon + "Game is paused"
+ - 04:10.982 last motion (going into this timestamp)
+ - 04:11.300 top clock 0:50
+ - 04:12.268 top clock 0:51
+ - 04:13.287 top clock 0:52
+ - 04:13.972 "Game Starting... 3"
+ - 04:14.289 top clock 0:53
+ - 04:14.924 ('3' gets big)
+ - 04:14.974 "Game Starting... 2"
+ - 04:15.291 top clock 0:54
+ - 04:15.926 ('2' gets big)
+ - 04:15.976 "Game Starting... 1"
+ - 04:16.293 top clock 0:55
+ - 04:16.360 "Fickle Frog" disappears
+ - 04:16.927 ('1' gets big)
+ - 04:16.978 pause icon on Viscous disappears, first motion (going into this timestamp)
+ - 04:16.994 "Game Starting" disappears
+ - 04:17.295 top clock 0:56
+ - 04:17.779 chat "Haze is on the bridge"
+ - 04:18.297 top clock 0:57
+ - 04:19.299 top clock 0:58
+ - 04:20.301 top clock 0:59
+ -   break
+ - 05:37.980 top clock 12:31
+ - 05:38.982 top clock 12:32
+ - 05:39.984 top clock 12:33
+ - 05:40.970 top clock 12:34
+ - 05:41.972 top clock 12:35
+ - 05:42.974 top clock 12:36
+ - 05:43.993 top clock 12:37
+ - 05:44.961 top clock 12:38
+ - 05:45.980 top clock 12:39
+ - 05:46.982 top clock 12:40
+ -   note the top clock stopping
+ - 06:17.275 pause icon + "Game is paused"
+ - 06:17.359 last motion (going into this timestamp)
+ - 06:19.547 top clock 12:41
+ - 06:20.549 top clock 12:42
+ - 06:21.535 top clock 12:43
+ - 06:22.554 top clock 12:44
+ - 06:23.556 top clock 12:45
+ - 06:24.541 top clock 12:46
+ - 06:25.560 top clock 12:47
+ - 06:26.562 top clock 12:48
+ - 06:27.548 top clock 12:49
+ - 06:28.533 top clock 12:50
+ - 06:29.569 top clock 12:51
+ - 06:30.554 top clock 12:52
+ - 06:31.089 chat "my audio is.."
+ - 06:31.540 top clock 12:53
+ - 06:32.559 top clock 12:54
+ - 06:33.561 top clock 12:55
+ - 06:34.530 top clock 12:56
+ - 06:35.565 top clock 12:57
+ - 06:36.551 top clock 12:58
+ - 06:37.536 top clock 12:59
+ - 06:38.555 top clock 13:00
+ - 06:38.722 chat "idc"
+ - 06:39.541 top clock 13:01
+ - 06:40.543 top clock 13:02
+ - 06:41.545 top clock 13:03
+ - 06:41.646 "my audio is..." disappaers
+ - 06:42.548 top clock 13:04
+ - 06:43.550 top clock 13:05
+ - 06:44.569 top clock 13:06
+ - 06:45.538 top clock 13:07
+ - 06:45.872 "Game Starting... 3"
+ - 06:46.557 top clock 13:08
+ - 06:46.824 ('3' gets big)
+ - 06:46.891 "Game Starting... 2"
+ - 06:47.542 top clock 13:09
+ - 06:47.726 chat "blow me"
+ - 06:47.826 ('2' gets big)
+ - 06:47.860 "Game Starting... 1"
+ - 06:48.561 top clock 13:10
+ - 06:48.812 ('1' gets big)
+ - 06:48.879 pause icon and "Game Starting" disappear, first motion (going into this timestamp)
+ - 06:49.296 "idc" disappears
+ - 06:49.530 top clock 13:11
+ - 06:50.549 top clock 13:12
+ - 06:51.534 top clock 13:13
+ - 06:52.536 top clock 13:14
+ - 06:53.521 top clock 13:15
+
+
+Fitzy Stream part 1: (Desktop 19.13.21.01)
+framerate basically the same
+ - 00:12.238 some menu ui disappears
+ - 00:12.254 "connecting to game server"
+ - 00:14.876 loading screen
+ - 00:17.397 some weird icon disappears in top right, might be overlay
+ - 00:17.764 partial ui
+ - 00:17.798 loading screen turns black
+ - 00:17.814 more partial ui
+ - 00:20.352 full ui, A connecting, 10 others connected
+ - 00:20.519 world (lobby), all except 5 connected, 12 health
+ - 00:20.536 1,3,9,10,11 hero ; 2,4 health
+ - 00:20.569 4,12 hero
+ - 00:20.719 7,8 hero
+ - 00:20.803 1 health
+ - 00:20.936 9 health
+ - 00:21.320 11 health
+ - 00:21.354 6 hero
+ - 00:21.771 3 hero
+ - 00:22.255 actually focus on wraith
+ - 00:22.406 10 health
+ - 00:22.439 3,6,7,8 health
+ - 00:29.351 5 connecting
+ - 01:00.723 5 connected
+ - 01:05.081 5 hero
+ - 01:06.567 "Game is paused"
+ - 01:06.600 5 health
+ - 01:07.351 "Game Starting... 9"
+ - 01:07.502 top clock 0:01
+ - 01:07.585 "Game Starting... -> 8"
+ - 01:08.503 top clock 0:02
+ - 01:09.288 "Game Starting... -> 7"
+ - 01:09.455 top clock 0:03
+ - 01:10.290 "Game Starting... -> 6"
+ - 01:10.490 top clock 0:04
+ - 01:11.292 "Game Starting... -> 5"
+ - 01:11.509 top clock 0:05
+ - 01:12.277 "Game Starting... -> 4"
+ - 01:12.444 top clock 0:06
+ - 01:13.278 "Game Starting... -> 3"
+ - 01:13.479 top clock 0:07
+ - 01:14.263 "Game Starting... -> 3" (yeah it's not a 2)
+ - 01:14.464 top clock 0:08
+ - 01:15.265 "Game Starting... -> 1"
+ - 01:15.449 top clock 0:09
+ - 01:16.250 "Game Starting... -> 0"
+ - 01:16.484 top clock 0:10
+ - 01:16.568- teleporting and ui stuff
+ - 01:17.452 top clock 0:11
+ - 01:18.454 top clock 0:12
+ - 01:19.456 top clock 0:13
+ - 01:20.458 top clock 0:14
+ - 01:21.493 top clock 0:15
+ - 01:22.461 top clock 0:16
+ - 01:23.430 top clock 0:17
+ - 01:24.465 top clock 0:18
+ - 01:25.467 top clcok 0:19
+ - 01:26.502 top clock 0:20
+ - 01:27.136 chat "Fickle Frog"
+ - 01:27.470 top clock 0:21
+ - 01:28.505 top clock 0:22
+ -   some lag in the stream, restored around 0:23
+ - 01:30.509 top clock 0:24
+ - 01:31.460 top clock 0:25
+ - 01:32.228 pause icon
+ - 01:32.245 fitzy sucked back (going into this timestamp), no more movement
+ - 01:32.279 "Game is paused"
+ -   fitzy tabs out a bit here, mightve caused render lag
+ - 01:35.635 "Game Starting... 3"
+ - 01:36.102 ('3' gets big)
+ - 01:36.269 "Game Starting... 2"
+ - 01:37.221 ('2' gets big)
+ - 01:37.772 "Game Starting... 1"
+ - 01:37.805 "Fickle Frog" disappears ('1' goes from big to small instantly)
+ - 01:38.222 ('1' gets big)
+ - 01:38.289 pause icon disappears, first movement (going into this timestamp)
+ - 01:38.323 "Game Starting" disappears
+ - 01:38.523 top clock 0:26
+ - 01:39.508 top clock 0:27
+ - 01:40.510 top clock 0:28
+ - 01:41.528 top clock 0:29
+ - 01:42.513 top clock 0:30
+
+
+Fitzy Stream part 2: (Desktop 19.15.59.02)
+framerate basically the same
+ - 00:00.901 top clock 12:05
+ - 00:01.903 top clock 12:06
+ - 00:02.905 top clock 12:07
+ - 00:03.906 top clock 12:08
+ - 00:04.908 top clock 12:09
+ - 00:05.910 top clock 12:10
+ - 00:06.912 top clock 12:11
+ - 00:07.913 top clock 12:12
+ - 00:08.915 top clock 12:13
+ - 00:09.917 top clock 12:14
+ - 00:10.919 top clock 12:15
+ - 00:11.904 top clock 12:16
+ - 00:12.906 top clock 12:17
+ - 00:13.907 top clock 12:18
+ - 00:14.909 top clock 12:19
+ - 00:15.911 top clock 12:20
+ - 00:16.913 top clock 12:21
+ - 00:17.914 top clock 12:22
+ - 00:18.916 top clock 12:23
+ - 00:19.918 top clock 12:24
+ - 00:20.920 top clock 12:25
+ - 00:21.921 top clock 12:26
+ - 00:22.907 top clock 12:27
+ - 00:23.925 top clock 12:28
+ - 00:24.927 top clock 12:29
+ - 00:25.912 top clock 12:30
+ - 00:26.930 top clock 12:31
+ - 00:27.915 top clock 12:32
+ - 00:28.934 top clock 12:33
+ - 00:29.886 top clock 12:34
+ - 00:30.904 top clock 12:35
+ - 00:31.906 top clock 12:36
+ - 00:32.907 top clock 12:37
+ - 00:33.909 top clock 12:38
+ - 00:34.911 top clock 12:39
+ - 00:35.913 top clock 12:40
+ - 00:36.347 pause icon
+ - 00:36.363 fitzy sucked back, no more movement
+ - 00:36.380 "Game is paused"
+ - 00:50.088 chat "my audio is.."
+ - 00:57.785 chat "idc"
+ - 01:00.639 "my audio is.." disappears
+ - 01:04.947 "Game Starting... 3"
+ - 01:05.899 ('3' gets big)
+ - 01:05.932 "Game Starting... 2"
+ - 01:06.750 chat "blow me"
+ - 01:06.901 ('2' gets big)
+ - 01:06.934 "Game Starting... 1"
+ - 01:07.835 ('1' gets big)
+ - 01:07.885 pause icon disappears
+ - 01:07.936 first movement (going into timestamp)
+ - 01:07.952 "Game Starting" disappears
+ - 01:08.286 "idc" disappears
+ - 01:08.470 top clock 12:41
+ - 01:09.472 top clock 12:42
+ - 01:10.473 top clock 12:43
+ - 01:11.492 top clock 12:44
+ - 01:12.494 top clock 12:45
+ - 01:13.479 top clock 12:46
+ - 01:14.497 top clock 12:47
+ - 01:15.482 top clock 12:48
+
+
+
