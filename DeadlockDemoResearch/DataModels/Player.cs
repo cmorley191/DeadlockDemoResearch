@@ -1,0 +1,146 @@
+﻿using System.Numerics;
+using System.Text.Json.Serialization;
+
+using DeadlockDemo = DemoFile.Game.Deadlock;
+
+namespace DeadlockDemoResearch.DataModels
+{
+  public interface IPlayerConstants
+  {
+    [JsonIgnore]
+    public DeadlockDemo.CCitadelPlayerPawn HeroPawn { get; }
+    public DeadlockDemo.TeamNumber Team { get; }
+    public string Name { get; }
+    public ulong SteamId { get; }
+    public byte LobbyPlayerSlot { get; }
+    public EHero HeroId { get; }
+  }
+
+  public record PlayerConstants : IPlayerConstants
+  {
+    [JsonIgnore]
+    public required DeadlockDemo.CCitadelPlayerPawn HeroPawn { get; init; }
+    public required DeadlockDemo.TeamNumber Team { get; init; }
+    public required string Name { get; init; }
+    public required ulong SteamId { get; init; }
+    public required byte LobbyPlayerSlot { get; init; }
+    public required EHero HeroId { get; init; }
+
+    public static PlayerConstants CopyFrom(IPlayerConstants other) => new PlayerConstants
+    {
+      HeroPawn = other.HeroPawn,
+      Team = other.Team,
+      Name = other.Name,
+      SteamId = other.SteamId,
+      LobbyPlayerSlot = other.LobbyPlayerSlot,
+      HeroId = other.HeroId,
+    };
+  }
+
+  public interface IPlayerVariables
+  {
+    public PlayerConnectedStateMasks Connected { get; }
+    public Vector3 BodyPosition { get; }
+    public float CamYaw { get; }
+    public float CamPitch { get; }
+    public byte Level { get; }
+    public int Health { get; }
+    public int MaxHealth { get; }
+    public bool IsAlive { get; }
+  }
+
+  public record PlayerVariables : IPlayerVariables
+  {
+    public required PlayerConnectedStateMasks Connected { get; init; }
+    public required Vector3 BodyPosition { get; init; }
+    public required float CamYaw { get; init; }
+    public required float CamPitch { get; init; }
+    public required byte Level { get; init; }
+    public required int Health { get; init; }
+    public required int MaxHealth { get; init; }
+    public required bool IsAlive { get; init; }
+
+    public static PlayerVariables CopyFrom(IPlayerVariables other) => new PlayerVariables
+    {
+      Connected = other.Connected,
+      BodyPosition = other.BodyPosition,
+      CamYaw = other.CamYaw,
+      CamPitch = other.CamPitch,
+      Level = other.Level,
+      Health = other.Health,
+      MaxHealth = other.MaxHealth,
+      IsAlive = other.IsAlive,
+    };
+  }
+
+  public class PlayerView : IPlayerConstants, IPlayerVariables
+  {
+    public required DeadlockDemo.CCitadelPlayerController Controller { get; init; }
+
+    public DeadlockDemo.CCitadelPlayerPawn HeroPawn => Controller.HeroPawn ?? throw new NullReferenceException(nameof(HeroPawn));
+    private bool heroPawnValid() => Controller.HeroPawn != null;
+    public DeadlockDemo.TeamNumber Team => Controller.CitadelTeamNum;
+    private bool teamValid() => Enum.IsDefined(Controller.CitadelTeamNum) && Controller.CitadelTeamNum != DeadlockDemo.TeamNumber.Unassigned;
+    public bool IsOnPlayingTeam => Team == DeadlockDemo.TeamNumber.Amber || Team == DeadlockDemo.TeamNumber.Sapphire;
+    public string Name => Controller.PlayerName;
+    private bool nameValid() => !string.IsNullOrEmpty(Controller.PlayerName);
+    public ulong SteamId => Controller.SteamID;
+    public byte LobbyPlayerSlot => (byte)Controller.LobbyPlayerSlot.Value;
+    private bool lobbyPlayerSlotValid() => Controller.LobbyPlayerSlot.Value >= byte.MinValue && Controller.LobbyPlayerSlot.Value <= byte.MaxValue;
+    public EHero HeroId =>
+      HeroPawn.CCitadelHeroComponent.HeroLoading.Value == 0
+      ? (EHero)HeroPawn.CCitadelHeroComponent.HeroID.Value
+      : (EHero)HeroPawn.CCitadelHeroComponent.HeroLoading.Value;
+    private bool heroIdValid() =>
+      heroPawnValid()
+      && (
+        (HeroPawn.CCitadelHeroComponent.HeroLoading.Value == 0 && Enum.IsDefined((EHero)HeroPawn.CCitadelHeroComponent.HeroID.Value))
+        || (HeroPawn.CCitadelHeroComponent.HeroID.Value == 0 && Enum.IsDefined((EHero)HeroPawn.CCitadelHeroComponent.HeroLoading.Value))
+      );
+
+    public PlayerConnectedStateMasks Connected => (PlayerConnectedStateMasks)Controller.Connected;
+    private bool connectedValid() => (int)Controller.Connected >= (int)PlayerConnectedStateMasks.MIN && (int)Controller.Connected <= (int)PlayerConnectedStateMasks.MAX;
+    public Vector3 BodyPosition => new(HeroPawn.Origin.X, HeroPawn.Origin.Y, HeroPawn.Origin.Z);
+    public float CamYaw => HeroPawn.ClientCamera.Yaw;
+    public float CamPitch => HeroPawn.ClientCamera.Pitch;
+    public byte Level => (byte)HeroPawn.Level;
+    private bool levelValid() => heroPawnValid() && HeroPawn.Level >= byte.MinValue && HeroPawn.Level <= byte.MaxValue;
+    public int Health => HeroPawn.Health;
+    private bool healthValid() => heroPawnValid() && HeroPawn.Health >= 0 && Controller.Health == 0;
+    public int MaxHealth => HeroPawn.MaxHealth;
+    private bool maxHealthValid() => heroPawnValid() && HeroPawn.MaxHealth >= 0 && Controller.MaxHealth == 0;
+    public bool IsAlive => HeroPawn.IsAlive;
+    private bool isAliveValid() => heroPawnValid() && Controller.IsAlive;
+
+
+    public bool AllValid() =>
+      heroPawnValid() && teamValid() && nameValid() && lobbyPlayerSlotValid() && heroIdValid()
+      && connectedValid() && levelValid() && healthValid() && maxHealthValid() && isAliveValid();
+  }
+
+  public class PlayerHistory
+  {
+    public PlayerHistory(PlayerView view)
+    {
+      View = view;
+      Constants = PlayerConstants.CopyFrom(view);
+    }
+
+    public PlayerView View { get; private init; }
+    public PlayerConstants Constants { get; private init; }
+    public List<(uint iFrame, PlayerVariables variables)> VariableHistory { get; } = [];
+
+    public void AfterFrame(Frame frame)
+    {
+      if (!View.AllValid()) throw new Exception($"{frame}: invalid elements on player \"{Constants.Name}\"");
+      if (PlayerConstants.CopyFrom(View) != Constants) throw new Exception($"{frame}: constants changed on player \"{Constants.Name}\"");
+
+      var frameVariables = PlayerVariables.CopyFrom(View);
+      if (VariableHistory.Count == 0 || frameVariables != VariableHistory[VariableHistory.Count - 1].variables)
+      {
+        VariableHistory.Add((frame.iFrame, frameVariables));
+      }
+    }
+  }
+
+}
