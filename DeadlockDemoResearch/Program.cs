@@ -1,6 +1,5 @@
 ﻿using DeadlockDemoResearch.DataModels;
 using GraphAlgorithms;
-using System.Linq.Expressions;
 using System.Numerics;
 using System.Text.Json;
 using DeadlockDemo = DemoFile.Game.Deadlock;
@@ -14,7 +13,10 @@ namespace DeadlockDemoResearch
       MainAsync(args).GetAwaiter().GetResult();
     }
 
-    private static readonly JsonSerializerOptions serializerOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions serializerOptions = new() { 
+      WriteIndented = true,
+      Converters = { new CustomJsonSerializerVector3Converter() },
+    };
     private static string SerializeJsonObject<T>(T value)
     {
       return JsonSerializer.Serialize<T>(value, serializerOptions).TrimStart('{', '\n').TrimEnd('}', '\n');
@@ -88,6 +90,8 @@ namespace DeadlockDemoResearch
       var owningTroopers = new Dictionary<DeadlockDemo.CNPC_Trooper, TrooperHistory>();
       var allTroopers = new List<TrooperHistory>();
       var allUnifiedTroopers = new List<UnifiedTrooperHistory>();
+
+      var towers = new Dictionary<DeadlockDemo.CNPC_TrooperBoss, TowerHistory>();
 
       void AfterFrame()
       {
@@ -341,6 +345,84 @@ namespace DeadlockDemoResearch
           }
         }
 
+        {
+          var seenTowers = new HashSet<TowerHistory>();
+          foreach (var towerEntity in demo.Entities.OfType<DeadlockDemo.CNPC_TrooperBoss>()) // no, compiler, this won't result in an empty sequence you dummy
+          {
+            TowerHistory tower;
+            if (towers.TryGetValue(towerEntity, out var existingHistory))
+            {
+              tower = existingHistory;
+            }
+            else
+            {
+              var view = new TowerView { Entity = towerEntity };
+              tower = new TowerHistory(view);
+              if (towers.Any(t => t.Value.Constants.Position == tower.Constants.Position)) throw new Exception(nameof(tower.Constants.Position));
+              towers.Add(towerEntity, tower);
+            }
+
+            if (!towerEntity.IsActive) throw new Exception(nameof(towerEntity.IsActive));
+
+            if (seenTowers.Contains(tower)) throw new Exception(nameof(seenTowers));
+            seenTowers.Add(tower);
+            tower.AfterFrame(frame, deleted: false);
+          }
+
+          foreach (var tower in towers)
+          {
+            if (!seenTowers.Contains(tower.Value))
+            {
+              tower.Value.AfterFrame(frame, deleted: true);
+            }
+          }
+        }
+
+        {
+          foreach (var walker in demo.Entities.OfType<DeadlockDemo.CNPC_Boss_Tier2>()) // no, compiler, this won't result in an empty sequence you dummy
+          {
+
+          }
+        }
+
+        {
+          foreach (var shrine in demo.Entities.OfType<DeadlockDemo.CCitadel_Destroyable_Building>()) // no, compiler, this won't result in an empty sequence you dummy
+          {
+            // note: check cellX to determine the side?
+            // 28 is near yellow, 34 near purple
+          }
+        }
+
+        {
+          foreach (var patron in demo.Entities.OfType<DeadlockDemo.CNPC_Boss_Tier3>()) // no, compiler, this won't result in an empty sequence you dummy
+          {
+
+          }
+        }
+
+        {
+          foreach (var neutral in demo.Entities.OfType<DeadlockDemo.CNPC_TrooperNeutral>()) // no, compiler, this won't result in an empty sequence you dummy
+          {
+
+          }
+        }
+
+        {
+          foreach (var midboss in demo.Entities.OfType<DeadlockDemo.CNPC_MidBoss>()) // no, compiler, this won't result in an empty sequence you dummy
+          {
+            // TODO: test there's only 0 or 1?
+          }
+        }
+
+        {
+          // TODO: urn
+        }
+
+        {
+          // TODO: soul orbs
+          // don't forget about the fountain vents
+        }
+
         iFrame++;
       }
 
@@ -447,6 +529,8 @@ namespace DeadlockDemoResearch
         }
       }
 
+      if (towers.Count != 2 /*teams*/ * (4 /*tier 1's*/ + 8/*tier 3's*/)) throw new Exception(nameof(towers));
+
       const int replayViewerTimelinePixels = 960;
       const int replayViewerTimelineSliderWidthPixels = 6;
       const int replayViewerTimelineSeekPixelOffset = -(replayViewerTimelineSliderWidthPixels / 2);
@@ -478,7 +562,8 @@ namespace DeadlockDemoResearch
         Console.WriteLine($"{currentFrame} (through {frames.FirstOrDefault(i => i.iFrame > iFrame, frames.Last())}) (seek to {frameToReplayViewerTimelineSeekToForFrame(currentFrame).ReplayClockSection}:{frameToReplayViewerTimelineSeekToForFrame(currentFrame).ReplayClockTime})");
 
         Console.WriteLine();
-        Console.WriteLine($">>>> Enter a command: quit, meta, break, go_frame, go_demo, go_game, go_game_time(s,t), go_replay_time(s,t), player(i), dump_troopers");
+        Console.WriteLine($">>>> Enter a command: quit, meta, break, go_frame, go_demo, go_game, go_game_time(s,t), go_replay_time(s,t), player(i), "
+                          + $"dump_troopers, dump_towers");
         // not shown: dump_partial_troopers
 
         var command = Console.ReadLine();
@@ -551,7 +636,7 @@ namespace DeadlockDemoResearch
           var filename = $"{matchId}_troopers.json";
           await File.WriteAllTextAsync(
             filename,
-            JsonSerializer.Serialize(
+            SerializeJsonObject(
               allUnifiedTroopers
               .Select(t => new
               {
@@ -570,12 +655,31 @@ namespace DeadlockDemoResearch
           var filename = $"{matchId}_partial_troopers.json";
           await File.WriteAllTextAsync(
             filename,
-            JsonSerializer.Serialize(
+            SerializeJsonObject(
               allTroopers
               .Select(t => new
               {
                 Constants = t.Constants,
                 Variables = t.VariableHistory.Select(v => new { v.iFrame, v.pvsState, v.variables }),
+              })
+              .ToList()
+            )
+          );
+          Console.WriteLine($"Wrote to {filename}");
+          continue;
+        }
+
+        if (command == "dump_towers")
+        {
+          var filename = $"{matchId}_towers.json";
+          await File.WriteAllTextAsync(
+            filename,
+            SerializeJsonObject(
+              towers.Values
+              .Select(t => new
+              {
+                Constants = t.Constants,
+                Variables = t.VariableHistory.Select(v => new { v.iFrame, v.deleted, v.variables }),
               })
               .ToList()
             )

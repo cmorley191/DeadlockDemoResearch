@@ -68,12 +68,24 @@ namespace DeadlockDemoResearch.DataModels
     Purple = 6,
   }
 
+  public enum ESubclassId : uint
+  {
+    TrooperSupport = 747565566,
+    TrooperZiplinePackage = 3237674373,
+    TrooperMelee = 3831103061,
+    TrooperRanged = 4164228731,
+
+    TowerTier1Amber = 2977181093,
+    TowerTier1Sapphire = 2713571573,
+    TowerTier3 = 2458524739,
+  }
+
   public enum ETrooperSubclassId : uint
   {
-    Support = 747565566,
-    ZiplinePackage = 3237674373, 
-    Melee = 3831103061, 
-    Ranged = 4164228731, 
+    Support = ESubclassId.TrooperSupport,
+    ZiplinePackage = ESubclassId.TrooperZiplinePackage, 
+    Melee = ESubclassId.TrooperMelee, 
+    Ranged = ESubclassId.TrooperRanged, 
   }
 
   public enum ETrooperActiveSubclassId : uint
@@ -666,4 +678,5 @@ namespace DeadlockDemoResearch.DataModels
     Unpacked_SelfDestructing = 5,
     Unpacked_Dead = 6,
   }
+
 }

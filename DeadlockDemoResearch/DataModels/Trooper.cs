@@ -29,20 +29,27 @@ namespace DeadlockDemoResearch.DataModels
     };
   }
 
-  public class TrooperStateMask
+  public class StateMask
   {
     public required uint[] Mask { get; init; }
 
+    public static StateMask From(uint[] mask)
+    {
+      var x = new StateMask { Mask = new uint[6] };
+      Array.Copy(mask, x.Mask, 6);
+      return x;
+    }
+
     public override bool Equals(object? obj) =>
-      obj is TrooperStateMask other && Mask.SequenceEqual(other.Mask);
+      obj is StateMask other && Mask.SequenceEqual(other.Mask);
     public override int GetHashCode() =>
       HashCode.Combine(Mask.Aggregate(0, HashCode.Combine));
   }
 
   public interface ITrooperVariables
   {
-    public NpcStateMasks NpcState { get; }
-    public byte LifeState { get; }
+    //public NpcStateMasks NpcState { get; }
+    //public byte LifeState { get; }
     public ETrooperRelevantState TrooperState { get; }
     public Vector3 Position { get; }
     public float Yaw { get; }
@@ -53,8 +60,8 @@ namespace DeadlockDemoResearch.DataModels
 
   public record TrooperVariables : ITrooperVariables
   {
-    public required NpcStateMasks NpcState { get; init; }
-    public required byte LifeState { get; init; }
+    //public required NpcStateMasks NpcState { get; init; }
+    //public required byte LifeState { get; init; }
     public required ETrooperRelevantState TrooperState { get; init; }
     public required Vector3 Position { get; init; }
     public required float Yaw { get; init; }
@@ -64,8 +71,8 @@ namespace DeadlockDemoResearch.DataModels
 
     public static TrooperVariables CopyFrom(ITrooperVariables other) => new()
     {
-      NpcState = other.NpcState,
-      LifeState = other.LifeState,
+      //NpcState = other.NpcState,
+      //LifeState = other.LifeState,
       TrooperState = other.TrooperState,
       Position = other.Position,
       Yaw = other.Yaw,
@@ -90,9 +97,9 @@ namespace DeadlockDemoResearch.DataModels
     public ELane Lane => (ELane)Entity.Lane;
     private bool laneValid() => Enum.IsDefined((ELane)Entity.Lane);
 
-    public NpcStateMasks NpcState => (NpcStateMasks)Entity.NPCState;
+    //public NpcStateMasks NpcState => (NpcStateMasks)Entity.NPCState;
     private bool npcStateValid() => (int)Entity.NPCState >= (int)NpcStateMasks.MIN && (int)Entity.NPCState <= (int)NpcStateMasks.MAX;
-    public byte LifeState => Entity.LifeState;
+    //public byte LifeState => Entity.LifeState;
     private bool lifeStateValid() => Entity.LifeState >= 0 && Entity.LifeState <= 2 && ((Entity.LifeState == 0) == Entity.IsAlive);
     private DeadlockDemo.CModifierProperty modifierProp => Entity.ModifierProp ?? throw new NullReferenceException(nameof(Entity.ModifierProp));
     private bool modifierPropValid() => Entity.ModifierProp != null;
