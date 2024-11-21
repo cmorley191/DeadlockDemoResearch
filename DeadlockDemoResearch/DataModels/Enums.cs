@@ -78,6 +78,11 @@ namespace DeadlockDemoResearch.DataModels
     TowerTier1Amber = 2977181093,
     TowerTier1Sapphire = 2713571573,
     TowerTier3 = 2458524739,
+
+    WalkerInsideLanesAmber = 3493103073,
+    WalkerInsideLanesSapphire = 736669903,
+    WalkerOutsideLanesAmber = 4174712489,
+    WalkerOutsideLanesSapphire = 3601160001,
   }
 
   public enum ETrooperSubclassId : uint

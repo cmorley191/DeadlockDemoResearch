@@ -97,12 +97,13 @@ namespace DeadlockDemoResearch.DataModels
     public ELane Lane => (ELane)Entity.Lane;
     private bool laneValid() => Enum.IsDefined((ELane)Entity.Lane);
 
+
     //public NpcStateMasks NpcState => (NpcStateMasks)Entity.NPCState;
     private bool npcStateValid() => (int)Entity.NPCState >= (int)NpcStateMasks.MIN && (int)Entity.NPCState <= (int)NpcStateMasks.MAX;
     //public byte LifeState => Entity.LifeState;
     private bool lifeStateValid() => Entity.LifeState >= 0 && Entity.LifeState <= 2 && ((Entity.LifeState == 0) == Entity.IsAlive);
     private DeadlockDemo.CModifierProperty modifierProp => Entity.ModifierProp ?? throw new NullReferenceException(nameof(Entity.ModifierProp));
-    private bool modifierPropValid() => Entity.ModifierProp != null;
+    private bool modifierPropAccessible() => Entity.ModifierProp != null;
     public ETrooperRelevantState TrooperState =>
       Subclass switch
       {
@@ -118,12 +119,13 @@ namespace DeadlockDemoResearch.DataModels
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool stateMaskZero(uint[] mask) =>
       mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0;
-    private bool trooperStateValid() =>
-      subclassValid()
-      && modifierPropValid()
-      && modifierProp.DisabledStateMask.Length == 6 && stateMaskZero(modifierProp.DisabledStateMask)
+    private bool trooperStateAccessible() =>
+      modifierProp.DisabledStateMask.Length == 6
       && modifierProp.EnabledStateMask.Length == 6
-      && modifierProp.EnabledPredictedStateMask.Length == 6 && (Subclass == ETrooperSubclassId.ZiplinePackage || stateMaskZero(modifierProp.EnabledPredictedStateMask));
+      && modifierProp.EnabledPredictedStateMask.Length == 6;
+    private bool trooperStateValid() =>
+      stateMaskZero(modifierProp.DisabledStateMask)
+      && (Subclass == ETrooperSubclassId.ZiplinePackage || stateMaskZero(modifierProp.EnabledPredictedStateMask));
     public Vector3 Position => new(Entity.Origin.X, Entity.Origin.Y, Entity.Origin.Z);
     public float Yaw => Entity.Rotation.Yaw;
     public float Pitch => Entity.Rotation.Pitch;
@@ -132,10 +134,10 @@ namespace DeadlockDemoResearch.DataModels
     public int MaxHealth => Entity.MaxHealth;
     private bool maxHealthValid() => Entity.MaxHealth >= 0;
 
-    public bool AllValid() =>
-      subclassValid() && teamValid() && laneValid() && npcStateValid() && lifeStateValid()
-      && modifierPropValid() && trooperStateValid()
-      && healthValid() && maxHealthValid();
+
+    public bool AllAccessible() => modifierPropAccessible() && trooperStateAccessible();
+    public bool ConstantsValid() => subclassValid() && teamValid() && laneValid();
+    public bool VariablesValid() => npcStateValid() && lifeStateValid() && trooperStateValid() && healthValid() && maxHealthValid();
   }
 
   public class TrooperHistory
@@ -143,6 +145,7 @@ namespace DeadlockDemoResearch.DataModels
     public TrooperHistory(TrooperView view, int iEntityOwnership)
     {
       View = view;
+      if (!View.AllAccessible() || !View.ConstantsValid()) throw new Exception(nameof(View));
       IEntityOwnership = iEntityOwnership;
       Constants = TrooperConstants.CopyFrom(view);
     }
@@ -160,7 +163,7 @@ namespace DeadlockDemoResearch.DataModels
 
       if (Constants.Subclass == ETrooperSubclassId.ZiplinePackage && pvsState != EEntityPvsState.Active) throw new Exception(nameof(pvsState));
 
-      if (!View.AllValid()) throw new Exception($"{frame}: invalid elements on trooper {View.Entity.EntityIndex.Value}");
+      if (!View.AllAccessible() || !View.VariablesValid()) throw new Exception($"{frame}: invalid elements on trooper {View.Entity.EntityIndex.Value}");
       if (TrooperConstants.CopyFrom(View) != Constants) throw new Exception($"{frame}: constants changed on trooper {View.Entity.EntityIndex.Value}");
 
       var frameVariables = TrooperVariables.CopyFrom(View);

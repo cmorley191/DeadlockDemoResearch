@@ -5,112 +5,93 @@ using DeadlockDemo = DemoFile.Game.Deadlock;
 
 namespace DeadlockDemoResearch.DataModels
 {
-  public interface ITowerConstants
+  public interface IWalkerConstants
   {
     public uint EntityIndex { get; }
-    /// <summary>
-    /// True=T3, False=T1
-    /// </summary>
-    public bool IsTierThree { get; }
     public DeadlockDemo.TeamNumber Team { get; }
     public ELane Lane { get; }
-    public Vector3 Position { get; }
     public ESubclassId Subclass { get; }
     public int MaxHealth { get; }
   }
 
-  public record TowerConstants : ITowerConstants
+  public record WalkerConstants : IWalkerConstants
   {
-    public static readonly List<(DeadlockDemo.TeamNumber team, ELane lane, Vector3 position)> ExpectedTier1Positions = [
-      (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-8128f, -1856f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Green,  new(-3072f, -1024f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(1536f, -2560f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Purple, new(7040f, -1984f, 248.03125f)),
-
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-7040f, 1984f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green,  new(-1536f, 2560f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(3072f, 1024f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Purple, new(8128f, 1856f, 248.03125f)),
-    ];
-    public static readonly List<(DeadlockDemo.TeamNumber team, ELane lane, Vector3 position)> ExpectedTier3Positions = [
-      (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-1920f, -6592f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-1664f, -6336f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Green,  new(-832f, -5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Green,  new(-544f, -5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(544f, -5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(832f, -5696f, 512.0625f)), // yep this one's got a weird Z
-      (DeadlockDemo.TeamNumber.Amber, ELane.Purple, new(1664f, -6336f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Purple, new(1920f, -6592f, 512.03125f)),
-
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-1920f, 6592f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-1664f, 6336f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green,  new(-832f, 5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green,  new(-544f, 5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(544f, 5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(832f, 5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Purple, new(1664f, 6336f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Purple, new(1920f, 6592f, 512.03125f)),
-    ];
-
     public required uint EntityIndex { get; init; }
-    public required bool IsTierThree { get; init; }
     public required DeadlockDemo.TeamNumber Team { get; init; }
     public required ELane Lane { get; init; }
-    public required Vector3 Position { get; init; }
     public required ESubclassId Subclass { get; init; }
     public required int MaxHealth { get; init; }
 
-    public static TowerConstants CopyFrom(ITowerConstants other) => new()
+    public static WalkerConstants CopyFrom(IWalkerConstants other) => new()
     {
       EntityIndex = other.EntityIndex,
-      IsTierThree = other.IsTierThree,
       Team = other.Team,
       Lane = other.Lane,
-      Position = other.Position,
       Subclass = other.Subclass,
       MaxHealth = other.MaxHealth,
     };
   }
 
-  public interface ITowerVariables
+  public interface IWalkerVariables
   {
     //public NpcStateMasks NpcState { get; }
     //public byte LifeState { get; }
+    //public StateMask DisabledState { get; }
     //public StateMask EnabledState { get; }
-    public bool IsTargeting { get; }
+    //public StateMask EnabledPredictedState { get; }
+    public bool IsVulnerable { get; }
     public bool IsFrozenByKelvinUlt { get; }
     public bool HasBackdoorProtection { get; }
+    public Vector3 Position { get; }
     public int Health { get; }
   }
 
-  public record TowerVariables : ITowerVariables
+  public record WalkerVariables : IWalkerVariables
   {
+    public static readonly List<(DeadlockDemo.TeamNumber team, ELane lane, Vector3 position)> ExpectedStartingPositions = [
+      (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-6144f, -4864f, 376f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Green,  new(-1664f, -3584f, 376f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(1664f, -4224f, 376f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Purple, new(5504, -5120f, 376f)),
+
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-5504f, 5120f, 376f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green,  new(-1664f, 4224f, 376f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(1672f, 3584f, 376f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Purple, new(6144f, 4864f, 376f)),
+    ];
+
+
     //public required NpcStateMasks NpcState { get; init; }
     //public required byte LifeState { get; init; }
+    //public required StateMask DisabledState { get; init; }
     //public required StateMask EnabledState { get; init; }
-    public required bool IsTargeting { get; init; }
+    //public required StateMask EnabledPredictedState { get; init; }
+    public required bool IsVulnerable { get; init; }
     public required bool IsFrozenByKelvinUlt { get; init; }
     public required bool HasBackdoorProtection { get; init; }
+    public required Vector3 Position { get; init; }
     public required int Health { get; init; }
 
-    public static TowerVariables CopyFrom(ITowerVariables other) => new()
+    public static WalkerVariables CopyFrom(IWalkerVariables other) => new()
     {
       //NpcState = other.NpcState,
       //LifeState = other.LifeState,
+      //DisabledState = other.DisabledState,
       //EnabledState = other.EnabledState,
-      IsTargeting = other.IsTargeting,
+      //EnabledPredictedState = other.EnabledPredictedState,
+      IsVulnerable = other.IsVulnerable,
       IsFrozenByKelvinUlt = other.IsFrozenByKelvinUlt,
       HasBackdoorProtection = other.HasBackdoorProtection,
+      Position = other.Position,
       Health = other.Health,
     };
   }
 
-  public class TowerView : ITowerConstants, ITowerVariables
+  public class WalkerView : IWalkerConstants, IWalkerVariables
   {
-    public required DeadlockDemo.CNPC_TrooperBoss Entity { get; init; }
+    public required DeadlockDemo.CNPC_Boss_Tier2 Entity { get; init; }
 
     public uint EntityIndex => Entity.EntityIndex.Value;
-    public bool IsTierThree => Entity is DeadlockDemo.CNPC_TrooperBarrackBoss;
     public DeadlockDemo.TeamNumber Team => Entity.CitadelTeamNum;
     private bool teamValid() =>
       Enum.IsDefined(Entity.CitadelTeamNum)
@@ -118,21 +99,15 @@ namespace DeadlockDemoResearch.DataModels
       && Entity.CitadelTeamNum != DeadlockDemo.TeamNumber.Spectator;
     public ELane Lane => (ELane)Entity.Lane;
     private bool laneValid() => Enum.IsDefined((ELane)Entity.Lane);
-    public Vector3 Position => new(Entity.Origin.X, Entity.Origin.Y, Entity.Origin.Z);
-    private bool positionValid() =>
-      (IsTierThree ? TowerConstants.ExpectedTier3Positions : TowerConstants.ExpectedTier1Positions)
-        .Any(p => p.team == Team && p.lane == Lane && p.position == Position);
     public ESubclassId Subclass => (ESubclassId)Entity.SubclassID.Value;
     private bool subclassValid() =>
       Entity.SubclassID.Value == (uint)(
-        IsTierThree
-        ? ESubclassId.TowerTier3
-        : Team == DeadlockDemo.TeamNumber.Amber
-        ? ESubclassId.TowerTier1Amber
-        : ESubclassId.TowerTier1Sapphire
+        (Lane == ELane.Yellow || Lane == ELane.Purple)
+        ? (Team == DeadlockDemo.TeamNumber.Amber ? ESubclassId.WalkerOutsideLanesAmber : ESubclassId.WalkerOutsideLanesSapphire)
+        : (Team == DeadlockDemo.TeamNumber.Amber ? ESubclassId.WalkerInsideLanesAmber : ESubclassId.WalkerInsideLanesSapphire)
       );
     public int MaxHealth => Entity.MaxHealth;
-    private bool maxHealthValid() => Entity.MaxHealth == (IsTierThree ? 4300 : 5500);
+    private bool maxHealthValid() => Entity.MaxHealth == ((Lane == ELane.Yellow || Lane == ELane.Purple) ? 5175 : 5800);
 
     //public NpcStateMasks NpcState => (NpcStateMasks)Entity.NPCState;
     private bool npcStateValid() => (int)Entity.NPCState >= (int)NpcStateMasks.MIN && (int)Entity.NPCState <= (int)NpcStateMasks.MAX;
@@ -144,7 +119,7 @@ namespace DeadlockDemoResearch.DataModels
     private static bool stateMaskZero(uint[] mask) =>
       mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0;
     //public StateMask EnabledState => StateMask.From(modifierProp.EnabledStateMask);
-    public bool IsTargeting => (modifierProp.EnabledStateMask[(int)ModifierStateIndex.Invulnerable] & (uint)ModifierStateMask.Invulnerable) == 0;
+    public bool IsVulnerable => (modifierProp.EnabledStateMask[(int)ModifierStateIndex.Invulnerable] & (uint)ModifierStateMask.Invulnerable) == 0;
     public bool IsFrozenByKelvinUlt => (modifierProp.EnabledStateMask[(int)ModifierStateIndex.NoIncomingDamage] & (uint)ModifierStateMask.NoIncomingDamage) != 0;
     public bool HasBackdoorProtection => (modifierProp.EnabledStateMask[(int)ModifierStateIndex.BackdoorProtected] & (uint)ModifierStateMask.BackdoorProtected) != 0;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -161,7 +136,7 @@ namespace DeadlockDemoResearch.DataModels
         ? (
           (modifierProp.EnabledStateMask[(int)ModifierStateIndex.HealthRegenDisabled] & (uint)ModifierStateMask.HealthRegenDisabled) != 0
           && (modifierProp.EnabledStateMask[(int)ModifierStateIndex.HealingDisabled] & (uint)ModifierStateMask.HealingDisabled) != 0
-          && allSame( // IsTargeting is defined by all three of these
+          && allSame( // IsVulnerable is defined by all three of these
             (modifierProp.EnabledStateMask[(int)ModifierStateIndex.Invulnerable] & (uint)ModifierStateMask.Invulnerable) != 0,
             (modifierProp.EnabledStateMask[(int)ModifierStateIndex.TechUntargetableByEnemies] & (uint)ModifierStateMask.TechUntargetableByEnemies) != 0,
             (modifierProp.EnabledStateMask[(int)ModifierStateIndex.NpcTargetableWhileInvulnerable] & (uint)ModifierStateMask.NpcTargetableWhileInvulnerable) != 0
@@ -174,40 +149,45 @@ namespace DeadlockDemoResearch.DataModels
         )
         : stateMaskZero(modifierProp.EnabledStateMask)
       );
+    public Vector3 Position => new(Entity.Origin.X, Entity.Origin.Y, Entity.Origin.Z);
     public int Health => Entity.Health;
     private bool healthValid() => Entity.IsAlive ? Entity.Health > 0 : Entity.Health == 0;
 
 
     public bool AllAccessible() => modifierPropAccessible() && statesAccessible();
-    public bool ConstantsValid() => teamValid() && laneValid() && positionValid() && subclassValid() && maxHealthValid();
+    public bool ConstantsValid() => teamValid() && laneValid() && subclassValid() && maxHealthValid();
     public bool VariablesValid() => npcStateValid() && lifeStateValid() && statesValid() && healthValid();
   }
 
-  public class TowerHistory
+  public class WalkerHistory
   {
-    public TowerHistory(TowerView view)
+    public WalkerHistory(WalkerView view)
     {
       View = view;
       if (!View.AllAccessible() || !View.ConstantsValid()) throw new Exception(nameof(View));
-      Constants = TowerConstants.CopyFrom(view);
+      if (
+        !WalkerVariables.ExpectedStartingPositions
+        .Any(p => p.team == View.Team && p.lane == View.Lane && p.position == View.Position)
+      ) throw new Exception(nameof(WalkerVariables.ExpectedStartingPositions));
+      Constants = WalkerConstants.CopyFrom(view);
     }
 
-    public TowerView View { get; private init; }
-    public TowerConstants Constants { get; private init; }
-    public List<(uint iFrame, bool deleted, TowerVariables variables)> VariableHistory { get; } = [];
+    public WalkerView View { get; private init; }
+    public WalkerConstants Constants { get; private init; }
+    public List<(uint iFrame, bool deleted, WalkerVariables variables)> VariableHistory { get; } = [];
 
     public void AfterFrame(Frame frame, bool deleted)
     {
-      if (!View.AllAccessible() || !View.VariablesValid()) throw new Exception($"{frame}: invalid elements on tower {View.Entity.EntityIndex.Value}");
-      if (TowerConstants.CopyFrom(View) != Constants) throw new Exception($"{frame}: constants changed on tower {View.Entity.EntityIndex.Value}");
+      if (!View.AllAccessible() || !View.VariablesValid()) throw new Exception($"{frame}: invalid elements on walker {View.Entity.EntityIndex.Value}");
+      if (WalkerConstants.CopyFrom(View) != Constants) throw new Exception($"{frame}: constants changed on walker {View.Entity.EntityIndex.Value}");
 
-      var frameVariables = TowerVariables.CopyFrom(View);
+      var frameVariables = WalkerVariables.CopyFrom(View);
 
       if (
         VariableHistory.Count > 0
         && VariableHistory[^1].deleted
         && (!deleted || frameVariables != VariableHistory[^1].variables)
-      ) throw new Exception($"{frame}: variables changed on deleted tower {View.Entity.EntityIndex.Value}");
+      ) throw new Exception($"{frame}: variables changed on deleted walker {View.Entity.EntityIndex.Value}");
 
       if (deleted && frameVariables.Health > 0) throw new Exception(nameof(deleted));
 

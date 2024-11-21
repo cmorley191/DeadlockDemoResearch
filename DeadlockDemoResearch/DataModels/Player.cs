@@ -78,7 +78,7 @@ namespace DeadlockDemoResearch.DataModels
     public required DeadlockDemo.CCitadelPlayerController Controller { get; init; }
 
     public DeadlockDemo.CCitadelPlayerPawn HeroPawn => Controller.HeroPawn ?? throw new NullReferenceException(nameof(HeroPawn));
-    private bool heroPawnValid() => Controller.HeroPawn != null;
+    private bool heroPawnAccessible() => Controller.HeroPawn != null;
     public DeadlockDemo.TeamNumber Team => Controller.CitadelTeamNum;
     private bool teamValid() => Enum.IsDefined(Controller.CitadelTeamNum) && Controller.CitadelTeamNum != DeadlockDemo.TeamNumber.Unassigned;
     public bool IsOnPlayingTeam => Team == DeadlockDemo.TeamNumber.Amber || Team == DeadlockDemo.TeamNumber.Sapphire;
@@ -86,17 +86,14 @@ namespace DeadlockDemoResearch.DataModels
     private bool nameValid() => !string.IsNullOrEmpty(Controller.PlayerName);
     public ulong SteamId => Controller.SteamID;
     public byte LobbyPlayerSlot => (byte)Controller.LobbyPlayerSlot.Value;
-    private bool lobbyPlayerSlotValid() => Controller.LobbyPlayerSlot.Value >= byte.MinValue && Controller.LobbyPlayerSlot.Value <= byte.MaxValue;
+    private bool lobbyPlayerSlotAccessible() => Controller.LobbyPlayerSlot.Value >= byte.MinValue && Controller.LobbyPlayerSlot.Value <= byte.MaxValue;
     public EHero HeroId =>
       HeroPawn.CCitadelHeroComponent.HeroLoading.Value == 0
       ? (EHero)HeroPawn.CCitadelHeroComponent.HeroID.Value
       : (EHero)HeroPawn.CCitadelHeroComponent.HeroLoading.Value;
     private bool heroIdValid() =>
-      heroPawnValid()
-      && (
-        (HeroPawn.CCitadelHeroComponent.HeroLoading.Value == 0 && Enum.IsDefined((EHero)HeroPawn.CCitadelHeroComponent.HeroID.Value))
-        || (HeroPawn.CCitadelHeroComponent.HeroID.Value == 0 && Enum.IsDefined((EHero)HeroPawn.CCitadelHeroComponent.HeroLoading.Value))
-      );
+      (HeroPawn.CCitadelHeroComponent.HeroLoading.Value == 0 && Enum.IsDefined((EHero)HeroPawn.CCitadelHeroComponent.HeroID.Value))
+      || (HeroPawn.CCitadelHeroComponent.HeroID.Value == 0 && Enum.IsDefined((EHero)HeroPawn.CCitadelHeroComponent.HeroLoading.Value));
 
     public PlayerConnectedStateMasks Connected => (PlayerConnectedStateMasks)Controller.Connected;
     private bool connectedValid() => (int)Controller.Connected >= (int)PlayerConnectedStateMasks.MIN && (int)Controller.Connected <= (int)PlayerConnectedStateMasks.MAX;
@@ -104,18 +101,18 @@ namespace DeadlockDemoResearch.DataModels
     public float CamYaw => HeroPawn.ClientCamera.Yaw;
     public float CamPitch => HeroPawn.ClientCamera.Pitch;
     public byte Level => (byte)HeroPawn.Level;
-    private bool levelValid() => heroPawnValid() && HeroPawn.Level >= byte.MinValue && HeroPawn.Level <= byte.MaxValue;
+    private bool levelAccessible() => HeroPawn.Level >= byte.MinValue && HeroPawn.Level <= byte.MaxValue;
     public int Health => HeroPawn.Health;
-    private bool healthValid() => heroPawnValid() && HeroPawn.Health >= 0 && Controller.Health == 0;
+    private bool healthValid() => HeroPawn.Health >= 0 && Controller.Health == 0;
     public int MaxHealth => HeroPawn.MaxHealth;
-    private bool maxHealthValid() => heroPawnValid() && HeroPawn.MaxHealth >= 0 && Controller.MaxHealth == 0;
+    private bool maxHealthValid() => HeroPawn.MaxHealth >= 0 && Controller.MaxHealth == 0;
     public bool IsAlive => HeroPawn.IsAlive;
-    private bool isAliveValid() => heroPawnValid() && Controller.IsAlive;
+    private bool isAliveValid() => Controller.IsAlive;
 
 
-    public bool AllValid() =>
-      heroPawnValid() && teamValid() && nameValid() && lobbyPlayerSlotValid() && heroIdValid()
-      && connectedValid() && levelValid() && healthValid() && maxHealthValid() && isAliveValid();
+    public bool AllAccessible() => heroPawnAccessible() && lobbyPlayerSlotAccessible() && levelAccessible();
+    public bool ConstantsValid() => teamValid() && nameValid() && heroIdValid();
+    public bool VariablesValid() => connectedValid() && healthValid() && maxHealthValid() && isAliveValid();
   }
 
   public class PlayerHistory
@@ -123,6 +120,7 @@ namespace DeadlockDemoResearch.DataModels
     public PlayerHistory(PlayerView view)
     {
       View = view;
+      if (!View.AllAccessible() || !View.ConstantsValid()) throw new Exception(nameof(View));
       Constants = PlayerConstants.CopyFrom(view);
     }
 
@@ -132,7 +130,7 @@ namespace DeadlockDemoResearch.DataModels
 
     public void AfterFrame(Frame frame)
     {
-      if (!View.AllValid()) throw new Exception($"{frame}: invalid elements on player \"{Constants.Name}\"");
+      if (!View.AllAccessible() || !View.VariablesValid()) throw new Exception($"{frame}: invalid elements on player \"{Constants.Name}\"");
       if (PlayerConstants.CopyFrom(View) != Constants) throw new Exception($"{frame}: constants changed on player \"{Constants.Name}\"");
 
       var frameVariables = PlayerVariables.CopyFrom(View);

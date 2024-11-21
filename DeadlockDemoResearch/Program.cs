@@ -92,6 +92,7 @@ namespace DeadlockDemoResearch
       var allUnifiedTroopers = new List<UnifiedTrooperHistory>();
 
       var towers = new Dictionary<DeadlockDemo.CNPC_TrooperBoss, TowerHistory>();
+      var walkers = new Dictionary<DeadlockDemo.CNPC_Boss_Tier2, WalkerHistory>();
 
       void AfterFrame()
       {
@@ -379,9 +380,35 @@ namespace DeadlockDemoResearch
         }
 
         {
-          foreach (var walker in demo.Entities.OfType<DeadlockDemo.CNPC_Boss_Tier2>()) // no, compiler, this won't result in an empty sequence you dummy
+          var seenWalkers = new HashSet<WalkerHistory>();
+          foreach (var walkerEntity in demo.Entities.OfType<DeadlockDemo.CNPC_Boss_Tier2>()) // no, compiler, this won't result in an empty sequence you dummy
           {
+            WalkerHistory walker;
+            if (walkers.TryGetValue(walkerEntity, out var existingHistory))
+            {
+              walker = existingHistory;
+            }
+            else
+            {
+              var view = new WalkerView { Entity = walkerEntity };
+              walker = new WalkerHistory(view);
+              if (walkers.Any(t => t.Value.VariableHistory.Count > 1 || t.Value.VariableHistory[0].variables.Position == walker.View.Position)) throw new Exception(nameof(walker.View.Position));
+              walkers.Add(walkerEntity, walker);
+            }
 
+            if (!walkerEntity.IsActive) throw new Exception(nameof(walkerEntity.IsActive));
+
+            if (seenWalkers.Contains(walker)) throw new Exception(nameof(seenWalkers));
+            seenWalkers.Add(walker);
+            walker.AfterFrame(frame, deleted: false);
+          }
+
+          foreach (var walker in walkers)
+          {
+            if (!seenWalkers.Contains(walker.Value))
+            {
+              walker.Value.AfterFrame(frame, deleted: true);
+            }
           }
         }
 
@@ -530,6 +557,7 @@ namespace DeadlockDemoResearch
       }
 
       if (towers.Count != 2 /*teams*/ * (4 /*tier 1's*/ + 8/*tier 3's*/)) throw new Exception(nameof(towers));
+      if (walkers.Count != 2 /*teams*/ * 4 /*lanes*/) throw new Exception(nameof(towers));
 
       const int replayViewerTimelinePixels = 960;
       const int replayViewerTimelineSliderWidthPixels = 6;
@@ -563,7 +591,7 @@ namespace DeadlockDemoResearch
 
         Console.WriteLine();
         Console.WriteLine($">>>> Enter a command: quit, meta, break, go_frame, go_demo, go_game, go_game_time(s,t), go_replay_time(s,t), player(i), "
-                          + $"dump_troopers, dump_towers");
+                          + $"dump_troopers, dump_towers, dump_walkers");
         // not shown: dump_partial_troopers
 
         var command = Console.ReadLine();
@@ -676,6 +704,25 @@ namespace DeadlockDemoResearch
             filename,
             SerializeJsonObject(
               towers.Values
+              .Select(t => new
+              {
+                Constants = t.Constants,
+                Variables = t.VariableHistory.Select(v => new { v.iFrame, v.deleted, v.variables }),
+              })
+              .ToList()
+            )
+          );
+          Console.WriteLine($"Wrote to {filename}");
+          continue;
+        }
+
+        if (command == "dump_walkers")
+        {
+          var filename = $"{matchId}_walkers.json";
+          await File.WriteAllTextAsync(
+            filename,
+            SerializeJsonObject(
+              walkers.Values
               .Select(t => new
               {
                 Constants = t.Constants,
