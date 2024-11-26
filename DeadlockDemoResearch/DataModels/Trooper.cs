@@ -126,7 +126,7 @@ namespace DeadlockDemoResearch.DataModels
     private bool trooperStateValid() =>
       stateMaskZero(modifierProp.DisabledStateMask)
       && (Subclass == ETrooperSubclassId.ZiplinePackage || stateMaskZero(modifierProp.EnabledPredictedStateMask));
-    public Vector3 Position => new(Entity.Origin.X, Entity.Origin.Y, Entity.Origin.Z);
+    public Vector3 Position => MiscFunctions.ConvertVector(Entity.Origin);
     public float Yaw => Entity.Rotation.Yaw;
     public float Pitch => Entity.Rotation.Pitch;
     public int Health => Entity.Health;

@@ -1,0 +1,67 @@
+ifrm  demo   reptime event
+      039483          ItemPickupIdol down
+      040233          ItemPickupIdol stop
+13681 040980 10:54.9 Okiie pickup purple middle
+14718 044088 11:46.7 Okiie returning area yellow middle
+14719 044091 11:46.7 Okiie returning
+14759 044211 11:48.7 Okiie returned
+      059379          ItemPickupIdol down
+      060129          ItemPickupIdol stop
+22910 068643 18:04.4 Log pickup purple middle
+23549 070560 18:36.3 Log drop
+23644 070845 18:41.1 Log pickup
+23678 070947 18:42.8 Log drop
+      070989          Ability disappears / ItemPickupIdol appears -- odd delay
+24035 072015 19:00.6 basil pickup
+24104 072222 19:04.0 basil returning area yellow sapphire
+24105 072225 19:04.1 basil returning
+24145 072345 19:06.1 basil returned
+      077379          ItemPickupIdol down
+      078129          ItemPickupIdol stop
+29685 088953 23:42.9 Okiie pickup yellow middle
+29848 089442 23:51.0 Okiie drop
+29958 089772 23:56.5 Okiie pickup
+30273 090714 24:12.2 Okiie drop
+31224 093567 24:59.8 Fitzyhere pickup
+31424 094164 25:09.7 Fitzyhere returning area blue sapphire, returning
+31464 094284 25:11.7 Fitzyhere returned
+      095379          ItemPickupIdol down
+      096129          ItemPickupIdol stop
+32351 096945 25:56.1 Log pickup purple middle
+33454 100251 26:51.2 Log drop
+34312 102822 27:34.0 Okiie pickup
+34447 103227 27:40.8 Okiie returning area yellow middle, returning
+34487 103347 27:42.8 Okkie returned
+
+
+
+ItemPickupIdol
+ - fall rate 144 on first pickup one
+ - fall rate 0 on drops
+ - model name is also "" on first one, not on the other
+ - team num 4 on first pickup
+ - team num of dropper on drop
+
+demo 39483
+ - ItemPickupIdol appears, begins descending
+ - all IdolReturnTriggers disabled false->true, CollisionFunctionMask 7->0
+demo 40233
+ - ItemPickupIdol stops descending
+demo 40980
+ - ItemPickupIdol disappears
+ - dropoff IdolReturnTrigger disabled true->false, CollisionFunctionMask 0->7, teamnum 0->2
+demo 40983
+ - Ability_GoldenIdol appears
+demo 44211
+ - Ability_GoldenIdol disappears
+ - dropoff disabled false->true, CollisionFunctionMask 7->0, teamnum 2->0
+
+
+demo 70551
+ - Ability_GoldenIdol changes (casting)
+demo 70560
+ - Ability_GoldenIdol changes (dropped)
+ - dropoff teamnum 3->0
+demo 70602
+ - Ability_GoldenIdol disappears
+ - ItemPickupIdol appears

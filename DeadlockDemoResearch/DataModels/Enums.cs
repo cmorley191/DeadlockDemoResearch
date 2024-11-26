@@ -684,4 +684,52 @@ namespace DeadlockDemoResearch.DataModels
     Unpacked_Dead = 6,
   }
 
+  public enum EUrnDropoffSpot
+  {
+    GreenAmber = 1,
+    PurpleAmber = 2,
+    YellowMiddle = 3,
+    PurpleMiddle = 4,
+    YellowSapphire = 5,
+    BlueSapphire = 6,
+  }
+
+  public enum EUrnPickupSpot
+  {
+    YellowMiddle = EUrnDropoffSpot.YellowMiddle,
+    PurpleMiddle = EUrnDropoffSpot.PurpleMiddle,
+  }
+
+  public enum EUrnDropoffSpotState
+  {
+    Inactive = 1,
+    ActiveForDroppedUrn_OrInitializing = 2,
+    ActiveForAmber = 3,
+    ActiveForSapphire = 4,
+  }
+
+  public enum EDroppedUrnType
+  {
+    NeverPickedUp = 1,
+    DroppedByAmber = 2,
+    DroppedBySapphire = 3,
+  }
+
+  public enum EPlayerUrnState
+  {
+    NotHolding = 1,
+    Holding = 2,
+    HoldingAndReturning = 3
+  }
+
+  public enum EUnifiedUrnState
+  {
+    Descending = 1,
+    WaitingForFirstPickup = 2,
+    PickedUp = 3,
+    DroppedSpawning = 4,
+    DroppedSpawned = 5,
+    Returning = 6,
+    Returned = 7,
+  }
 }

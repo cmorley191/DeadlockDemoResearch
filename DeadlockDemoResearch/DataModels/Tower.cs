@@ -118,7 +118,7 @@ namespace DeadlockDemoResearch.DataModels
       && Entity.CitadelTeamNum != DeadlockDemo.TeamNumber.Spectator;
     public ELane Lane => (ELane)Entity.Lane;
     private bool laneValid() => Enum.IsDefined((ELane)Entity.Lane);
-    public Vector3 Position => new(Entity.Origin.X, Entity.Origin.Y, Entity.Origin.Z);
+    public Vector3 Position => MiscFunctions.ConvertVector(Entity.Origin);
     private bool positionValid() =>
       (IsTierThree ? TowerConstants.ExpectedTier3Positions : TowerConstants.ExpectedTier1Positions)
         .Any(p => p.team == Team && p.lane == Lane && p.position == Position);

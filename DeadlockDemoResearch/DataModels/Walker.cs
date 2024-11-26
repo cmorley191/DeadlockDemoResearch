@@ -43,6 +43,8 @@ namespace DeadlockDemoResearch.DataModels
     public bool IsFrozenByKelvinUlt { get; }
     public bool HasBackdoorProtection { get; }
     public Vector3 Position { get; }
+    public float Yaw { get; }
+    public float Pitch { get; }
     public int Health { get; }
   }
 
@@ -70,6 +72,8 @@ namespace DeadlockDemoResearch.DataModels
     public required bool IsFrozenByKelvinUlt { get; init; }
     public required bool HasBackdoorProtection { get; init; }
     public required Vector3 Position { get; init; }
+    public required float Yaw { get; init; }
+    public required float Pitch { get; init; }
     public required int Health { get; init; }
 
     public static WalkerVariables CopyFrom(IWalkerVariables other) => new()
@@ -83,6 +87,8 @@ namespace DeadlockDemoResearch.DataModels
       IsFrozenByKelvinUlt = other.IsFrozenByKelvinUlt,
       HasBackdoorProtection = other.HasBackdoorProtection,
       Position = other.Position,
+      Yaw = other.Yaw,
+      Pitch = other.Pitch,
       Health = other.Health,
     };
   }
@@ -149,7 +155,9 @@ namespace DeadlockDemoResearch.DataModels
         )
         : stateMaskZero(modifierProp.EnabledStateMask)
       );
-    public Vector3 Position => new(Entity.Origin.X, Entity.Origin.Y, Entity.Origin.Z);
+    public Vector3 Position => MiscFunctions.ConvertVector(Entity.Origin);
+    public float Yaw => Entity.Rotation.Yaw;
+    public float Pitch => Entity.Rotation.Pitch;
     public int Health => Entity.Health;
     private bool healthValid() => Entity.IsAlive ? Entity.Health > 0 : Entity.Health == 0;
 

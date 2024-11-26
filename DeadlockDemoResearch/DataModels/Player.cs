@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 using DeadlockDemo = DemoFile.Game.Deadlock;
@@ -40,6 +41,10 @@ namespace DeadlockDemoResearch.DataModels
   public interface IPlayerVariables
   {
     public PlayerConnectedStateMasks Connected { get; }
+    public StateMask DisabledState { get; }
+    public StateMask EnabledState { get; }
+    public StateMask EnabledPredictedState { get; }
+    public EPlayerUrnState UrnState { get; }
     public Vector3 BodyPosition { get; }
     public float CamYaw { get; }
     public float CamPitch { get; }
@@ -52,6 +57,10 @@ namespace DeadlockDemoResearch.DataModels
   public record PlayerVariables : IPlayerVariables
   {
     public required PlayerConnectedStateMasks Connected { get; init; }
+    public required StateMask DisabledState { get; init; }
+    public required StateMask EnabledState { get; init; }
+    public required StateMask EnabledPredictedState { get; init; }
+    public required EPlayerUrnState UrnState { get; init; }
     public required Vector3 BodyPosition { get; init; }
     public required float CamYaw { get; init; }
     public required float CamPitch { get; init; }
@@ -60,9 +69,13 @@ namespace DeadlockDemoResearch.DataModels
     public required int MaxHealth { get; init; }
     public required bool IsAlive { get; init; }
 
-    public static PlayerVariables CopyFrom(IPlayerVariables other) => new PlayerVariables
+    public static PlayerVariables CopyFrom(IPlayerVariables other) => new()
     {
       Connected = other.Connected,
+      DisabledState = other.DisabledState,
+      EnabledState = other.EnabledState,
+      EnabledPredictedState = other.EnabledPredictedState,
+      UrnState = other.UrnState,
       BodyPosition = other.BodyPosition,
       CamYaw = other.CamYaw,
       CamPitch = other.CamPitch,
@@ -97,7 +110,35 @@ namespace DeadlockDemoResearch.DataModels
 
     public PlayerConnectedStateMasks Connected => (PlayerConnectedStateMasks)Controller.Connected;
     private bool connectedValid() => (int)Controller.Connected >= (int)PlayerConnectedStateMasks.MIN && (int)Controller.Connected <= (int)PlayerConnectedStateMasks.MAX;
-    public Vector3 BodyPosition => new(HeroPawn.Origin.X, HeroPawn.Origin.Y, HeroPawn.Origin.Z);
+    private bool controllerModifierPropInaccessible() => Controller.ModifierProp == null;
+    private DeadlockDemo.CModifierProperty pawnModifierProp => HeroPawn.ModifierProp ?? throw new NullReferenceException(nameof(HeroPawn.ModifierProp));
+    private bool pawnModifierPropAccessible() => HeroPawn.ModifierProp != null;
+    public StateMask DisabledState => StateMask.From(pawnModifierProp.DisabledStateMask);
+    public StateMask EnabledState => StateMask.From(pawnModifierProp.EnabledStateMask);
+    public StateMask EnabledPredictedState => StateMask.From(pawnModifierProp.EnabledPredictedStateMask);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool stateMaskZero(uint[] mask) =>
+      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0;
+    private bool statesAccessible() =>
+      pawnModifierProp.DisabledStateMask.Length == 6
+      && pawnModifierProp.EnabledStateMask.Length == 6
+      && pawnModifierProp.EnabledPredictedStateMask.Length == 6;
+    public EPlayerUrnState UrnState =>
+      (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.ReturningIdol] & (uint)ModifierStateMask.ReturningIdol) != 0
+      ? EPlayerUrnState.HoldingAndReturning
+      : (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.HoldingIdol] & (uint)ModifierStateMask.HoldingIdol) != 0
+      ? EPlayerUrnState.Holding
+      : EPlayerUrnState.NotHolding;
+    private bool urnStateValid()
+    {
+      var holding = (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.HoldingIdol] & (uint)ModifierStateMask.HoldingIdol) != 0;
+      if (holding != ((pawnModifierProp.EnabledPredictedStateMask[(int)ModifierStateIndex.HoldingIdol] & (uint)ModifierStateMask.HoldingIdol) != 0)) return false;
+      var returning = (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.ReturningIdol] & (uint)ModifierStateMask.ReturningIdol) != 0;
+      if (returning && !holding) return false;
+      if (returning != ((pawnModifierProp.EnabledPredictedStateMask[(int)ModifierStateIndex.ReturningIdol] & (uint)ModifierStateMask.ReturningIdol) != 0)) return false;
+      return true;
+    }
+    public Vector3 BodyPosition => MiscFunctions.ConvertVector(HeroPawn.Origin);
     public float CamYaw => HeroPawn.ClientCamera.Yaw;
     public float CamPitch => HeroPawn.ClientCamera.Pitch;
     public byte Level => (byte)HeroPawn.Level;
@@ -110,9 +151,13 @@ namespace DeadlockDemoResearch.DataModels
     private bool isAliveValid() => Controller.IsAlive;
 
 
-    public bool AllAccessible() => heroPawnAccessible() && lobbyPlayerSlotAccessible() && levelAccessible();
+    public bool AllAccessible() => 
+      heroPawnAccessible() && lobbyPlayerSlotAccessible() 
+      && controllerModifierPropInaccessible() // inaccessible is intentional -- notify if this ever becomes accessible
+      && pawnModifierPropAccessible() && statesAccessible() 
+      && levelAccessible();
     public bool ConstantsValid() => teamValid() && nameValid() && heroIdValid();
-    public bool VariablesValid() => connectedValid() && healthValid() && maxHealthValid() && isAliveValid();
+    public bool VariablesValid() => connectedValid() && urnStateValid() && healthValid() && maxHealthValid() && isAliveValid();
   }
 
   public class PlayerHistory
