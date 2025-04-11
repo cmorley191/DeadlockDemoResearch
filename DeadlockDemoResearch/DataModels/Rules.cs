@@ -4,17 +4,17 @@ namespace DeadlockDemoResearch.DataModels
 {
   public interface IRulesConstants
   {
-    public int ExperimentalGameplayState { get; }
+    public string GameplayExperiment { get; }
     public DeadlockDemo.ECitadelMatchMode MatchMode { get; }
   }
   public record RulesConstants : IRulesConstants
   {
-    public required int ExperimentalGameplayState { get; init; }
+    public required string GameplayExperiment { get; init; }
     public required DeadlockDemo.ECitadelMatchMode MatchMode { get; init; }
 
     public static RulesConstants CopyFrom(IRulesConstants other) => new()
     {
-      ExperimentalGameplayState = other.ExperimentalGameplayState,
+      GameplayExperiment = other.GameplayExperiment,
       MatchMode = other.MatchMode,
     };
   }
@@ -54,7 +54,7 @@ namespace DeadlockDemoResearch.DataModels
   {
     public required DeadlockDemo.CCitadelGameRules Rules { get; init; }
 
-    public int ExperimentalGameplayState => Rules.ExperimentalGameplayState;
+    public string GameplayExperiment => Rules.GameplayExperiment.Value;
     public DeadlockDemo.ECitadelMatchMode MatchMode => Rules.MatchMode;
     private bool matchModeValid() =>
       Rules.MatchMode == DeadlockDemo.ECitadelMatchMode.k_ECitadelMatchMode_Unranked

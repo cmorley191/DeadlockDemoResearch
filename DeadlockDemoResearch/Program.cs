@@ -1008,7 +1008,7 @@ namespace DeadlockDemoResearch
           Console.WriteLine();
           Console.WriteLine($"MatchID:                     {matchId}");
           Console.WriteLine($"Match Mode:                  {rules.Constants.MatchMode}");
-          Console.WriteLine($"Experimental gameplay state: {rules.Constants.ExperimentalGameplayState}");
+          Console.WriteLine($"Experimental gameplay state: {rules.Constants.GameplayExperiment}");
           Console.WriteLine($"Pre-Game \"start time\":     {rules.PreGameConstants.GameStartTime}");
           Console.WriteLine($"State changes:");
           Console.WriteLine(
