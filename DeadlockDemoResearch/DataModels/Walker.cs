@@ -113,7 +113,7 @@ namespace DeadlockDemoResearch.DataModels
         : (Team == DeadlockDemo.TeamNumber.Amber ? ESubclassId.WalkerInsideLanesAmber : ESubclassId.WalkerInsideLanesSapphire)
       );
     public int MaxHealth => Entity.MaxHealth;
-    private bool maxHealthValid() => Entity.MaxHealth == ((Lane == ELane.Yellow || Lane == ELane.Purple) ? 5175 : 5800);
+    private bool maxHealthValid() => Entity.MaxHealth == ((Lane == ELane.Yellow || Lane == ELane.Purple) ? 5175 : 8000); // middle lane 5800 pre 11-21
 
     //public NpcStateMasks NpcState => (NpcStateMasks)Entity.NPCState;
     private bool npcStateValid() => (int)Entity.NPCState >= (int)NpcStateMasks.MIN && (int)Entity.NPCState <= (int)NpcStateMasks.MAX;

@@ -104,6 +104,8 @@ namespace DeadlockDemoResearch
       var inactiveUrns = new List<UnifiedUrnHistory>();
       UnifiedUrnHistory? activeUrn = null;
 
+      var soulOrbs = new Dictionary<DeadlockDemo.CItemXP, SoulOrbHistory>();
+
       void AfterFrame()
       {
         var previousFrame = frame;
@@ -452,7 +454,7 @@ namespace DeadlockDemoResearch
         }
 
         {
-          
+
 
           (UrnHistory value, bool justDeleted)? seenUrnPickup = null;
           {
@@ -553,8 +555,8 @@ namespace DeadlockDemoResearch
             {
               if (activeUrn != null || inactiveUrns.Any() || seenUrnPickup != null) throw new Exception(nameof(urnDropoffSpots));
             }
-            else if (urnDropoffSpots.All(s => 
-              s.Value.VariableHistory.Count >= 2 
+            else if (urnDropoffSpots.All(s =>
+              s.Value.VariableHistory.Count >= 2
               && s.Value.VariableHistory[^2].variables.State == EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing
               && s.Value.VariableHistory[^1].iFrame == iFrame
               && s.Value.VariableHistory[^1].variables.State == EUrnDropoffSpotState.Inactive
@@ -627,7 +629,7 @@ namespace DeadlockDemoResearch
                 case EUnifiedUrnState.DroppedSpawned:
                   {
                     if (
-                      seenUrnPickup == null 
+                      seenUrnPickup == null
                       || seenUrnPickup.Value.value != (lastState == EUnifiedUrnState.WaitingForFirstPickup ? activeUrn.SpawnUrn : activeUrn.VariableHistory[^1].unheldUrn)
                     ) throw new Exception(nameof(seenUrnPickup));
 
@@ -678,7 +680,7 @@ namespace DeadlockDemoResearch
                         lastState == EUnifiedUrnState.WaitingForFirstPickup
                         ? enabledUrnDropoffSpot != null
                         : (
-                          enabledUrnDropoffSpot == null 
+                          enabledUrnDropoffSpot == null
                           || enabledUrnDropoffSpot != activeUrn.DropoffSpot
                           || enabledUrnDropoffSpot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing
                         )
@@ -819,8 +821,35 @@ namespace DeadlockDemoResearch
         }
 
         {
-          // TODO: soul orbs
-          // don't forget about the fountain vents
+          var seenSoulOrbs = new HashSet<SoulOrbHistory>();
+          foreach (var soulOrbEntity in demo.Entities.OfType<DeadlockDemo.CItemXP>()) // no, compiler, this won't result in an empty sequence you dummy
+          {
+            SoulOrbHistory soulOrb;
+            if (soulOrbs.TryGetValue(soulOrbEntity, out var existingHistory))
+            {
+              soulOrb = existingHistory;
+            }
+            else
+            {
+              var view = new SoulOrbView { Entity = soulOrbEntity };
+              soulOrb = new SoulOrbHistory(view);
+              soulOrbs.Add(soulOrbEntity, soulOrb);
+            }
+
+            var pvsState = soulOrbEntity.IsActive ? EEntityPvsState.Active : EEntityPvsState.InactiveButPresent;
+
+            if (seenSoulOrbs.Contains(soulOrb)) throw new Exception(nameof(seenSoulOrbs));
+            seenSoulOrbs.Add(soulOrb);
+            soulOrb.AfterFrame(frame, pvsState);
+          }
+
+          foreach (var soulOrb in soulOrbs)
+          {
+            if (!seenSoulOrbs.Contains(soulOrb.Value))
+            {
+              soulOrb.Value.AfterFrame(frame, pvsState: EEntityPvsState.Deleted);
+            }
+          }
         }
 
         iFrame++;
@@ -965,7 +994,7 @@ namespace DeadlockDemoResearch
 
         Console.WriteLine();
         Console.WriteLine($">>>> Enter a command: quit, meta, break, go_frame, go_demo, go_game, go_game_time(s,t), go_replay_time(s,t), player(i), "
-                          + $"dump_players, dump_troopers, dump_towers, dump_walkers, dump_urns");
+                          + $"dump_players, dump_troopers, dump_towers, dump_walkers, dump_urns, dump_orbs");
         // not shown: dump_partial_troopers
 
         var command = Console.ReadLine();
@@ -1139,47 +1168,72 @@ namespace DeadlockDemoResearch
           await File.WriteAllTextAsync(
             filename,
             SerializeJsonObject(
-              new
-              {
-                Players =
-                  players
-                  .Select(t => new
+                  /*
+                  new
                   {
-                    Constants = t.Constants,
-                    Variables = t.VariableHistory.Select(v => new { v.iFrame, v.variables }),
-                  })
-                  .ToList(),
-                UrnPickups =
-                  urnPickups
-                  .Select(p => new
-                  {
-                    Constants = p.Value.Constants,
-                    Variables = p.Value.VariableHistory.Select(v => new { v.iFrame, v.deleted, v.variables }),
-                  })
-                  .ToList(),
-                UrnDropoffSpots =
-                  urnDropoffSpots
-                  .Select(t => new
-                  {
-                    Constants = t.Value.Constants,
-                    Variables = t.Value.VariableHistory.Select(v => new { v.iFrame, v.variables }),
-                  })
-                  .ToList(),
-                UnifiedUrns =
+                    Players =
+                      players
+                      .Select(t => new
+                      {
+                        Constants = t.Constants,
+                        Variables = t.VariableHistory.Select(v => new { v.iFrame, v.variables }),
+                      })
+                      .ToList(),
+                    UrnPickups =
+                      urnPickups
+                      .Select(p => new
+                      {
+                        Constants = p.Value.Constants,
+                        Variables = p.Value.VariableHistory.Select(v => new { v.iFrame, v.deleted, v.variables }),
+                      })
+                      .ToList(),
+                    UrnDropoffSpots =
+                      urnDropoffSpots
+                      .Select(t => new
+                      {
+                        Constants = t.Value.Constants,
+                        Variables = t.Value.VariableHistory.Select(v => new { v.iFrame, v.variables }),
+                      })
+                      .ToList(),
+                    UnifiedUrns =
+                  */
                   inactiveUrns.Concat(activeUrn == null ? Enumerable.Empty<UnifiedUrnHistory>() : activeUrn.Yield())
                   .Select(u => new
                   {
                     SpawnConstants = u.SpawnConstants,
                     DropoffSpotConstants = u.DropoffSpot?.Constants,
-                    Variables = u.VariableHistory.Select(v => new { 
-                      v.iFrame, 
-                      v.state, 
+                    Variables = u.VariableHistory.Select(v => new
+                    {
+                      v.iFrame,
+                      v.state,
                       Player = v.holdingPlayer?.Constants.Name,
                       Urn = v.unheldUrn?.View.Entity.EntityIndex.Value,
                     }),
                   })
-                  .ToList(),
-              }
+                  .ToList()/*,
+              }*/
+            )
+          );
+          Console.WriteLine($"Wrote to {filename}");
+          ReleaseUnusedMemoryNow();
+          continue;
+        }
+
+        if (command == "dump_orbs")
+        {
+          var filename = $"{matchId}_orbs.json";
+          await File.WriteAllTextAsync(
+            filename,
+            SerializeJsonObject(
+              soulOrbs.Values
+              .Select(t => new
+              {
+                FirstFrameConstants = t.FirstFrameConstants,
+                SubsequentConstants = t.SubsequentConstants?.constants,
+                SubsequentConstantsIFrame = t.SubsequentConstants?.iFrame ?? 0,
+                Variables = t.VariableHistory.Select(v => new { v.iFrame, v.pvsState, v.variables }),
+              })
+              .ToList()
             )
           );
           Console.WriteLine($"Wrote to {filename}");
@@ -1370,7 +1424,7 @@ namespace DeadlockDemoResearch
         default: throw new ArgumentException(nameof(type));
       }
     }
-  
+
     private static void ReleaseUnusedMemoryNow()
     {
       var originalLOHCompactionMode = GCSettings.LargeObjectHeapCompactionMode;

@@ -83,6 +83,13 @@ namespace DeadlockDemoResearch.DataModels
     WalkerInsideLanesSapphire = 736669903,
     WalkerOutsideLanesAmber = 4174712489,
     WalkerOutsideLanesSapphire = 3601160001,
+
+    SoulOrbFountain = 7345281,
+    SoulOrbVendingMachine = 828604450,
+    SoulOrbUrn = 3283937835,
+    SoulOrbPlayer = 3027388212,
+    SoulOrbTowersWalkers = 2172658167,
+    SoulOrbTrooper = 494398941,
   }
 
   public enum ETrooperSubclassId : uint
@@ -99,6 +106,16 @@ namespace DeadlockDemoResearch.DataModels
     // Zipline isn't Active
     Melee = ETrooperSubclassId.Melee,
     Ranged = ETrooperSubclassId.Ranged,
+  }
+
+  public enum ESoulOrbSubclassId : uint
+  {
+    SoulOrbFountain = ESubclassId.SoulOrbFountain,
+    SoulOrbVendingMachine = ESubclassId.SoulOrbVendingMachine,
+    SoulOrbUrn = ESubclassId.SoulOrbUrn,
+    SoulOrbPlayer = ESubclassId.SoulOrbPlayer,
+    SoulOrbTowersWalkers = ESubclassId.SoulOrbTowersWalkers,
+    SoulOrbTrooper = ESubclassId.SoulOrbTrooper,
   }
 
   public enum ModifierStateShift

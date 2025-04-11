@@ -20,7 +20,7 @@ namespace DeadlockDemoResearch.DataModels
   public record PlayerConstants : IPlayerConstants
   {
     [JsonIgnore]
-    public required DeadlockDemo.CCitadelPlayerPawn HeroPawn { get; init; }
+    public /*required*/ DeadlockDemo.CCitadelPlayerPawn HeroPawn { get; init; }
     public required DeadlockDemo.TeamNumber Team { get; init; }
     public required string Name { get; init; }
     public required ulong SteamId { get; init; }
