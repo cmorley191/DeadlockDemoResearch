@@ -35,8 +35,8 @@ namespace DeadlockDemoResearch.DataModels
 
     public static StateMask From(uint[] mask)
     {
-      var x = new StateMask { Mask = new uint[6] };
-      Array.Copy(mask, x.Mask, 6);
+      var x = new StateMask { Mask = new uint[7] };
+      Array.Copy(mask, x.Mask, 7);
       return x;
     }
 
@@ -56,6 +56,7 @@ namespace DeadlockDemoResearch.DataModels
     public float Pitch { get; }
     public int Health { get; }
     public int MaxHealth { get; }
+    public bool IsAlive { get; }
   }
 
   public record TrooperVariables : ITrooperVariables
@@ -68,6 +69,7 @@ namespace DeadlockDemoResearch.DataModels
     public required float Pitch { get; init; }
     public required int Health { get; init; }
     public required int MaxHealth { get; init; }
+    public required bool IsAlive { get; init; }
 
     public static TrooperVariables CopyFrom(ITrooperVariables other) => new()
     {
@@ -79,6 +81,7 @@ namespace DeadlockDemoResearch.DataModels
       Pitch = other.Pitch,
       Health = other.Health,
       MaxHealth = other.MaxHealth,
+      IsAlive = other.IsAlive,
     };
   }
 
@@ -118,11 +121,11 @@ namespace DeadlockDemoResearch.DataModels
       };
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool stateMaskZero(uint[] mask) =>
-      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0;
+      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0 && mask[6] == 0;
     private bool trooperStateAccessible() =>
-      modifierProp.DisabledStateMask.Length == 6
-      && modifierProp.EnabledStateMask.Length == 6
-      && modifierProp.EnabledPredictedStateMask.Length == 6;
+      modifierProp.DisabledStateMask.Length == 7
+      && modifierProp.EnabledStateMask.Length == 7
+      && modifierProp.EnabledPredictedStateMask.Length == 7;
     private bool trooperStateValid() =>
       stateMaskZero(modifierProp.DisabledStateMask)
       && (Subclass == ETrooperSubclassId.ZiplinePackage || stateMaskZero(modifierProp.EnabledPredictedStateMask));
@@ -130,9 +133,10 @@ namespace DeadlockDemoResearch.DataModels
     public float Yaw => Entity.Rotation.Yaw;
     public float Pitch => Entity.Rotation.Pitch;
     public int Health => Entity.Health;
-    private bool healthValid() => Entity.IsAlive ? Entity.Health > 0 : Entity.Health == 0;
+    private bool healthValid() => Entity.IsAlive ? Entity.Health > 0 : (Entity.Health >= 0 && Entity.Health <= 1);
     public int MaxHealth => Entity.MaxHealth;
     private bool maxHealthValid() => Entity.MaxHealth >= 0;
+    public bool IsAlive => Entity.IsAlive;
 
 
     public bool AllAccessible() => modifierPropAccessible() && trooperStateAccessible();

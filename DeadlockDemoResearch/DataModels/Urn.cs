@@ -1,4 +1,5 @@
 ﻿
+using DemoFile;
 using System.Numerics;
 using static CMsgServerNetworkStats.Types;
 using DeadlockDemo = DemoFile.Game.Deadlock;
@@ -21,7 +22,7 @@ namespace DeadlockDemoResearch.DataModels
 
     public static readonly Dictionary<EUrnDropoffSpot, UrnDropoffSpotBounds> ExpectedBounds = new() {
       {
-        EUrnDropoffSpot.PurpleAmber,
+        EUrnDropoffSpot.GreenAmber,
         new() {
           Origin = new(4544f, -3392f, 496f),
           Mins = new(-64f, -112f, -80f),
@@ -29,7 +30,7 @@ namespace DeadlockDemoResearch.DataModels
         }
       },
       {
-        EUrnDropoffSpot.GreenAmber,
+        EUrnDropoffSpot.YellowAmber,
         new() {
           Origin = new(-3680f, -3072f, 496f),
           Mins = new(-63.999756f, -111.998535f, -80f),
@@ -45,7 +46,7 @@ namespace DeadlockDemoResearch.DataModels
         }
       },
       {
-        EUrnDropoffSpot.BlueSapphire,
+        EUrnDropoffSpot.GreenSapphire,
         new() {
           Origin = new(3680f, 3072f, 496f),
           Mins = new(-64.001465f, -112.000244f, -80f),
@@ -61,7 +62,7 @@ namespace DeadlockDemoResearch.DataModels
         }
       },
       {
-        EUrnDropoffSpot.PurpleMiddle,
+        EUrnDropoffSpot.GreenMiddle,
         new() {
           Origin = new(6579f, 0f, 208f),
           Mins = new(-72.00001f, -112f, -80f),
@@ -133,7 +134,7 @@ namespace DeadlockDemoResearch.DataModels
       Entity.Disabled
       ? EUrnDropoffSpotState.Inactive
       : Entity.CitadelTeamNum == DeadlockDemo.TeamNumber.Unassigned
-      ? EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing
+      ? EUrnDropoffSpotState.ActiveForDroppedUrn
       : Entity.CitadelTeamNum == DeadlockDemo.TeamNumber.Amber
       ? EUrnDropoffSpotState.ActiveForAmber
       : EUrnDropoffSpotState.ActiveForSapphire;
@@ -206,9 +207,9 @@ namespace DeadlockDemoResearch.DataModels
   {
     public const float ExpectedPlusMinusSpawnX = 6584f;
     public const float ExpectedSpawnY = 0f;
-    public const float ExpectedSpawnZ = 1939.1875f;
+    public const float ExpectedSpawnZ = 1542f;
     public const float ExpectedSpawnZTolerance = 10f;
-    public const float ExpectedSpawnLandingZ = 132f;
+    public const float ExpectedSpawnLandingZ = 130f;
 
     public required Vector3 Position { get; init; }
 
@@ -231,7 +232,7 @@ namespace DeadlockDemoResearch.DataModels
     private bool typeValid() =>
       (int)Entity.CitadelTeamNum == 4
       ? (
-        Entity.FallRate == 144.0f
+        Entity.FallRate == 112.0f
         && Entity.ModelName.Value == ""
       )
       : (
@@ -329,7 +330,7 @@ namespace DeadlockDemoResearch.DataModels
       SpawnUrn = spawnUrn;
       SpawnConstants = new()
       {
-        InitialPickupSpot = spawnUrn.VariableHistory[0].variables.Position.X < 0 ? EUrnPickupSpot.YellowMiddle : EUrnPickupSpot.PurpleMiddle,
+        InitialPickupSpot = spawnUrn.VariableHistory[0].variables.Position.X < 0 ? EUrnPickupSpot.YellowMiddle : EUrnPickupSpot.GreenMiddle,
       };
     }
 
@@ -339,5 +340,7 @@ namespace DeadlockDemoResearch.DataModels
     public List<(uint iFrame, EUnifiedUrnState state, PlayerHistory? holdingPlayer, UrnHistory? unheldUrn)> VariableHistory { get; } = [];
     private UrnDropoffSpotHistory? _dropoffSpot = null;
     public UrnDropoffSpotHistory? DropoffSpot { get => _dropoffSpot; set { if (_dropoffSpot != null) throw new Exception(); _dropoffSpot = value; } }
+
+    // No AfterFrame() function like most History classes because the logic is too complicated to *not* do directly in Program (with access to everything)
   }
 }

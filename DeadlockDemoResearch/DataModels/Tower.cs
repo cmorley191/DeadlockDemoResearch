@@ -23,33 +23,27 @@ namespace DeadlockDemoResearch.DataModels
   {
     public static readonly List<(DeadlockDemo.TeamNumber team, ELane lane, Vector3 position)> ExpectedTier1Positions = [
       (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-8128f, -1856f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Green,  new(-3072f, -1024f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(1536f, -2560f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Purple, new(7040f, -1984f, 248.03125f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(256f, -1792f, 376.03125f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Green, new(7040f, -1984f, 248.03125f)),
 
       (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-7040f, 1984f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green,  new(-1536f, 2560f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(3072f, 1024f, 248.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Purple, new(8128f, 1856f, 248.03125f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(-256f, 1792f, 376.03125f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green, new(8128f, 1856f, 248.03125f)),
     ];
     public static readonly List<(DeadlockDemo.TeamNumber team, ELane lane, Vector3 position)> ExpectedTier3Positions = [
       (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-1920f, -6592f, 512.03125f)),
       (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-1664f, -6336f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Green,  new(-832f, -5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Green,  new(-544f, -5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(544f, -5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(832f, -5696f, 512.0625f)), // yep this one's got a weird Z
-      (DeadlockDemo.TeamNumber.Amber, ELane.Purple, new(1664f, -6336f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Purple, new(1920f, -6592f, 512.03125f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(-128f, -5696f, 512.03125f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(128f, -5696f, 512.0625f)), // yep this one's got a weird Z
+      (DeadlockDemo.TeamNumber.Amber, ELane.Green, new(1664f, -6336f, 512.03125f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Green, new(1920f, -6592f, 512.03125f)),
 
       (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-1920f, 6592f, 512.03125f)),
       (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-1664f, 6336f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green,  new(-832f, 5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green,  new(-544f, 5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(544f, 5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(832f, 5696f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Purple, new(1664f, 6336f, 512.03125f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Purple, new(1920f, 6592f, 512.03125f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(-128f, 5696f, 512.03125f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(128f, 5696f, 512.03125f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green, new(1664f, 6336f, 512.03125f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green, new(1920f, 6592f, 512.03125f)),
     ];
 
     public required uint EntityIndex { get; init; }
@@ -142,7 +136,7 @@ namespace DeadlockDemoResearch.DataModels
     private bool modifierPropAccessible() => Entity.ModifierProp != null;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool stateMaskZero(uint[] mask) =>
-      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0;
+      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0 && mask[6] == 0;
     //public StateMask EnabledState => StateMask.From(modifierProp.EnabledStateMask);
     public bool IsTargeting => (modifierProp.EnabledStateMask[(int)ModifierStateIndex.Invulnerable] & (uint)ModifierStateMask.Invulnerable) == 0;
     public bool IsFrozenByKelvinUlt => (modifierProp.EnabledStateMask[(int)ModifierStateIndex.NoIncomingDamage] & (uint)ModifierStateMask.NoIncomingDamage) != 0;
@@ -150,9 +144,9 @@ namespace DeadlockDemoResearch.DataModels
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool allSame(bool x, bool y, bool z) => (x == y) && (x == z);
     private bool statesAccessible() =>
-      modifierProp.DisabledStateMask.Length == 6
-      && modifierProp.EnabledStateMask.Length == 6
-      && modifierProp.EnabledPredictedStateMask.Length == 6;
+      modifierProp.DisabledStateMask.Length == 7
+      && modifierProp.EnabledStateMask.Length == 7
+      && modifierProp.EnabledPredictedStateMask.Length == 7;
     private bool statesValid() => 
       stateMaskZero(modifierProp.DisabledStateMask)
       && stateMaskZero(modifierProp.EnabledPredictedStateMask)

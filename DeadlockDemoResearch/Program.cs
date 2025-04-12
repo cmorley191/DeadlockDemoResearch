@@ -142,7 +142,7 @@ namespace DeadlockDemoResearch
             ? 0.0f // 00:00 until PreGameWait
             : lastMatchClockVariables.Value.newMatchClock.Value + ( // HasValue checked a few lines up
               lastMatchClockVariables.Value.variables.PauseState == EPauseState.Unpaused
-              ? (demo.CurrentGameTick.Value - lastMatchClockVariables.Value.gameTick) / 60.0f
+              ? (demo.CurrentGameTick.Value - lastMatchClockVariables.Value.gameTick) / Frame.TICKS_PER_SECOND
               : 0.0f
             ),
           GameClockSection =
@@ -153,12 +153,12 @@ namespace DeadlockDemoResearch
             ? (
               frames.Count == 0
               ? 0.0f
-              : (demo.CurrentGameTick.Value - frames.First().GameTick) / 60.0f
+              : (demo.CurrentGameTick.Value - frames.First().GameTick) / Frame.TICKS_PER_SECOND
             )
             : lastMatchClockEvent.Value.ev.MatchTime + (
               lastMatchClockEvent.Value.ev.Paused || lastMatchClockEvent.Value.iFrame == iFrame
               ? 0.0f
-              : (demo.CurrentGameTick.Value - frames.First(f => f.iFrame == lastMatchClockEvent.Value.iFrame).GameTick) / 60.0f // could do .Single but first is faster
+              : (demo.CurrentGameTick.Value - frames.First(f => f.iFrame == lastMatchClockEvent.Value.iFrame).GameTick) / Frame.TICKS_PER_SECOND // could do .Single but first is faster
             ),
           ReplayClockSection = (uint)matchClockEvents.Count,
           ReplayClockPaused = matchClockEvents.Select(e => e.ev.Paused).LastOrDefault(defaultValue: false),
@@ -221,8 +221,8 @@ namespace DeadlockDemoResearch
             if (owningTroopers.TryGetValue(trooperEntity, out var existingHistory))
             {
               if (
-                existingHistory.VariableHistory.Last().variables.Health == 0
-                && trooperEntity.Health > 0
+                !existingHistory.VariableHistory[^1].variables.IsAlive
+                && trooperEntity.IsAlive
               )
               {
                 trooperLosingOwnership = existingHistory;
@@ -270,14 +270,14 @@ namespace DeadlockDemoResearch
               else if (
                 trooper.VariableHistory.Count > 1
                 && trooper.VariableHistory[^1].iFrame == iFrame
-                && trooper.VariableHistory[^1].variables.Health == 0
-                && trooper.VariableHistory[^2].variables.Health > 0
+                && !trooper.VariableHistory[^1].variables.IsAlive
+                && trooper.VariableHistory[^2].variables.IsAlive
               )
               {
                 thisFrameDiedZiplineTroopers.Add(trooper);
               }
             }
-            else if (newTrooper && trooper.VariableHistory[0].variables.Health > 0)
+            else if (newTrooper && trooper.VariableHistory[0].variables.IsAlive)
             {
               thisFrameBornActiveTroopers.Add(trooper);
             }
@@ -529,7 +529,7 @@ namespace DeadlockDemoResearch
 
                 urnDropoffSpot.AfterFrame(frame);
 
-                if (urnDropoffSpot.VariableHistory[0].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing) throw new Exception(nameof(IUrnDropoffSpotVariables.State));
+                if (urnDropoffSpot.VariableHistory[0].variables.State != EUrnDropoffSpotState.Inactive) throw new Exception(nameof(IUrnDropoffSpotVariables.State));
               }
 
               if (urnDropoffSpots.Count != 6 && urnDropoffSpots.Count != 0) throw new Exception(nameof(urnDropoffSpots.Count));
@@ -551,29 +551,24 @@ namespace DeadlockDemoResearch
               if (seenSpots.Count != urnDropoffSpots.Count) throw new Exception(nameof(seenSpots));
             }
 
-            if (urnDropoffSpots.All(s => s.Value.VariableHistory[^1].variables.State == EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing))
+            foreach (var spot in urnDropoffSpots.Values)
             {
-              if (activeUrn != null || inactiveUrns.Any() || seenUrnPickup != null) throw new Exception(nameof(urnDropoffSpots));
-            }
-            else if (urnDropoffSpots.All(s =>
-              s.Value.VariableHistory.Count >= 2
-              && s.Value.VariableHistory[^2].variables.State == EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing
-              && s.Value.VariableHistory[^1].iFrame == iFrame
-              && s.Value.VariableHistory[^1].variables.State == EUrnDropoffSpotState.Inactive
-            ))
-            {
-              if (activeUrn != null || inactiveUrns.Any() || seenUrnPickup == null || seenUrnPickup.Value.justDeleted) throw new Exception(nameof(urnDropoffSpots));
-            }
-            else
-            {
-              foreach (var spot in urnDropoffSpots.Values)
+              if (spot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.Inactive)
               {
-                if (spot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.Inactive)
-                {
-                  if (enabledUrnDropoffSpot != null) throw new Exception(nameof(spot));
-                  enabledUrnDropoffSpot = spot;
-                }
+                if (enabledUrnDropoffSpot != null) throw new Exception(nameof(spot));
+                enabledUrnDropoffSpot = spot;
               }
+            }
+          }
+
+          DeadlockDemo.CCitadel_Ability_GoldenIdol? seenUrnAbility = null;
+          {
+            var seenUrnAbilities = demo.Entities.OfType<DeadlockDemo.CCitadel_Ability_GoldenIdol>().ToList(); // no, compiler, this won't result in an empty sequence you dummy
+            if (seenUrnAbilities.Count > 1) throw new Exception(nameof(seenUrnAbilities));
+            else if (seenUrnAbilities.TryGet(0, out var seenUrnAbility_))
+            {
+              seenUrnAbility = seenUrnAbility_;
+              if (seenUrnAbility.OwnerEntity == null) throw new Exception(nameof(seenUrnAbility.OwnerEntity));
             }
           }
 
@@ -582,7 +577,10 @@ namespace DeadlockDemoResearch
 
             if (activeUrn == null)
             {
-              if (players.Any(p => p.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding)) throw new Exception(nameof(players));
+              if (players.Any(
+                p => p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.Holding
+                || p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.HoldingAndReturning
+              )) throw new Exception(nameof(players));
               if (enabledUrnDropoffSpot != null) throw new Exception(nameof(enabledUrnDropoffSpot));
 
               if (seenUrnPickup != null)
@@ -609,7 +607,10 @@ namespace DeadlockDemoResearch
               {
                 case EUnifiedUrnState.Descending:
                   {
-                    if (players.Any(p => p.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding)) throw new Exception(nameof(players));
+                    if (players.Any(
+                      p => p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.Holding
+                      || p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.HoldingAndReturning
+                    )) throw new Exception(nameof(players));
                     if (enabledUrnDropoffSpot != null || activeUrn.DropoffSpot != null) throw new Exception(nameof(enabledUrnDropoffSpot));
 
                     if (seenUrnPickup == null || seenUrnPickup.Value.justDeleted || seenUrnPickup.Value.value != activeUrn.SpawnUrn) throw new Exception(nameof(seenUrnPickup));
@@ -644,45 +645,85 @@ namespace DeadlockDemoResearch
                           lastState == EUnifiedUrnState.WaitingForFirstPickup
                           && player.VariableHistory[^1].variables.UrnState == EPlayerUrnState.HoldingAndReturning
                         ) throw new Exception(nameof(player));
-                        else if (player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding)
+                        
+                        if (
+                          player.VariableHistory[^1].variables.UrnState == EPlayerUrnState.Holding
+                          || player.VariableHistory[^1].variables.UrnState == EPlayerUrnState.HoldingAndReturning
+                        )
                         {
                           if (pickupPlayer != null) throw new Exception(nameof(player));
                           pickupPlayer = player;
+
+                          if (player.VariableHistory[^2].variables.UrnState != EPlayerUrnState.NotHoldingButPickingUp) throw new Exception(nameof(player));
                         }
                       }
 
-                      if (pickupPlayer == null) throw new Exception(nameof(pickupPlayer));
-
-                      if (
-                        enabledUrnDropoffSpot == null
-                        || (
-                          enabledUrnDropoffSpot.VariableHistory[^1].variables.State
-                          != (pickupPlayer.Constants.Team == DeadlockDemo.TeamNumber.Amber ? EUrnDropoffSpotState.ActiveForAmber : EUrnDropoffSpotState.ActiveForSapphire)
-                        )
-                      ) throw new Exception(nameof(enabledUrnDropoffSpot));
-                      if ((lastState == EUnifiedUrnState.WaitingForFirstPickup) != (activeUrn.DropoffSpot == null)) throw new Exception(nameof(activeUrn.DropoffSpot));
+                      if (enabledUrnDropoffSpot == null) throw new Exception(nameof(enabledUrnDropoffSpot));
                       if (lastState == EUnifiedUrnState.WaitingForFirstPickup)
                       {
+                        if (activeUrn.DropoffSpot != null) throw new Exception(nameof(activeUrn.DropoffSpot));
                         activeUrn.DropoffSpot = enabledUrnDropoffSpot;
                       }
+                      else
+                      {
+                        if (activeUrn.DropoffSpot == null) throw new Exception(nameof(activeUrn.DropoffSpot));
+                      }
 
-                      activeUrn.VariableHistory.Add((
-                        iFrame: iFrame,
-                        state: pickupPlayer.VariableHistory[^1].variables.UrnState == EPlayerUrnState.Holding ? EUnifiedUrnState.PickedUp : EUnifiedUrnState.Returning,
-                        holdingPlayer: pickupPlayer,
-                        unheldUrn: null
-                      ));
+                      if (pickupPlayer == null)
+                      {
+                        // Suspect this is a very special case when a player uses a movement ability (or does something else illegal) right at the moment of pickup,
+                        // causing it to *immediately* drop in the same frame.
+                        // A good example of this is 20:00 in 34748372 where I think the player tried to do a movement ability the moment they picked up the urn.
+                        // We'll fall back to the urn ability, which links to the picked-up player but it's a little annoying since the behavior of this ability
+                        //   is overall quite weird (sometimes it takes a frame or to to appear on normal pickups).
+                        if (seenUrnAbility == null) throw new Exception(nameof(pickupPlayer));
+                        if (enabledUrnDropoffSpot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn) throw new Exception(nameof(enabledUrnDropoffSpot));
+                        pickupPlayer = players.Single(p => p.View.HeroPawn == seenUrnAbility.OwnerEntity);
+                        if (pickupPlayer.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHoldingButPickingUp) throw new Exception(nameof(seenUrnAbility));
+                        Console.WriteLine($"Warning: obscure urn pickup edge case occured at {frame}");
+                        activeUrn.VariableHistory.Add((
+                          iFrame: iFrame,
+                          state: EUnifiedUrnState.PickedUp,
+                          holdingPlayer: players.Single(p => p.View.HeroPawn == seenUrnAbility.OwnerEntity),
+                          unheldUrn: null
+                        ));
+                        activeUrn.VariableHistory.Add((
+                          iFrame: iFrame,
+                          state: EUnifiedUrnState.DroppedSpawning,
+                          holdingPlayer: null,
+                          unheldUrn: null
+                        ));
+                      }
+                      else
+                      {
+                        if (
+                          enabledUrnDropoffSpot.VariableHistory[^1].variables.State
+                          != (pickupPlayer.Constants.Team == DeadlockDemo.TeamNumber.Amber ? EUrnDropoffSpotState.ActiveForAmber : EUrnDropoffSpotState.ActiveForSapphire)
+                        ) throw new Exception(nameof(enabledUrnDropoffSpot));
+                        activeUrn.VariableHistory.Add((
+                          iFrame: iFrame,
+                          state:
+                            (pickupPlayer.VariableHistory[^1].variables.UrnState == EPlayerUrnState.Holding)
+                            ? EUnifiedUrnState.PickedUp
+                            : EUnifiedUrnState.Returning,
+                          holdingPlayer: pickupPlayer,
+                          unheldUrn: null
+                        ));
+                      }
                     }
                     else
                     {
-                      if (players.Any(p => p.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding)) throw new Exception(nameof(players));
+                      if (players.Any(
+                        p => p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.Holding
+                        || p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.HoldingAndReturning
+                      )) throw new Exception(nameof(players));
                       if (
                         lastState == EUnifiedUrnState.WaitingForFirstPickup
                         ? enabledUrnDropoffSpot != null
                         : (
                           enabledUrnDropoffSpot == null
                           || enabledUrnDropoffSpot != activeUrn.DropoffSpot
-                          || enabledUrnDropoffSpot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing
+                          || enabledUrnDropoffSpot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn
                         )
                       ) throw new Exception(nameof(enabledUrnDropoffSpot));
                     }
@@ -697,11 +738,15 @@ namespace DeadlockDemoResearch
                       if (player.VariableHistory[^1].iFrame != iFrame) continue;
                       if (activeUrn != null && player == activeUrn.VariableHistory[^1].holdingPlayer)
                       {
-                        if (player.VariableHistory[^1].variables.UrnState == EPlayerUrnState.NotHolding)
+                        if (
+                          player.VariableHistory[^1].variables.UrnState == EPlayerUrnState.NotHolding 
+                          || player.VariableHistory[^1].variables.UrnState == EPlayerUrnState.NotHoldingButPickingUp // you probably can't pick up right away but just in case
+                        )
                         {
                           if (enabledUrnDropoffSpot == null)
                           {
-                            if (seenUrnPickup.HasValue) throw new Exception(nameof(seenUrnPickup));
+                            if (seenUrnPickup != null) throw new Exception(nameof(seenUrnPickup));
+                            if (player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding) throw new Exception(nameof(player));
 
                             activeUrn.VariableHistory.Add((
                               iFrame: iFrame,
@@ -716,9 +761,8 @@ namespace DeadlockDemoResearch
                           else
                           {
                             if (
-                              enabledUrnDropoffSpot == null
-                              || enabledUrnDropoffSpot != activeUrn.DropoffSpot
-                              || enabledUrnDropoffSpot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing
+                              enabledUrnDropoffSpot != activeUrn.DropoffSpot
+                              || enabledUrnDropoffSpot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn
                             ) throw new Exception(nameof(enabledUrnDropoffSpot));
 
                             if (seenUrnPickup.HasValue)
@@ -740,6 +784,7 @@ namespace DeadlockDemoResearch
                             }
                             else
                             {
+                              if (player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding) throw new Exception(nameof(player));
                               activeUrn.VariableHistory.Add((
                                 iFrame: iFrame,
                                 state: EUnifiedUrnState.DroppedSpawning,
@@ -751,7 +796,7 @@ namespace DeadlockDemoResearch
                         }
                         else
                         {
-                          if (seenUrnPickup.HasValue) throw new Exception(nameof(seenUrnPickup));
+                          if (seenUrnPickup != null) throw new Exception(nameof(seenUrnPickup));
 
                           if (
                             enabledUrnDropoffSpot == null
@@ -777,19 +822,39 @@ namespace DeadlockDemoResearch
                           }
                         }
                       }
-                      else if (player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding) throw new Exception(nameof(player));
+                    }
+
+                    foreach (var player in players)
+                    {
+                      if (player.VariableHistory[^1].iFrame != iFrame) continue;
+                      if (activeUrn != null && activeUrn.VariableHistory[^1].state == EUnifiedUrnState.DroppedSpawned)
+                      {
+                        if (
+                          player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding
+                          && player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHoldingButPickingUp
+                        ) throw new Exception(nameof(player));
+                      }
+                      else if (!(
+                        activeUrn != null
+                        && (
+                          activeUrn.VariableHistory[^1].state == EUnifiedUrnState.PickedUp
+                          || activeUrn.VariableHistory[^1].state == EUnifiedUrnState.Returning
+                        )
+                        && player == activeUrn.VariableHistory[^1].holdingPlayer
+                      ))
+                      {
+                        if (player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding) throw new Exception(nameof(player));
+                      }
                     }
                   }
                   break;
 
                 case EUnifiedUrnState.DroppedSpawning:
                   {
-                    if (players.Any(p => p.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding)) throw new Exception(nameof(players));
-
                     if (
                       enabledUrnDropoffSpot == null
                       || enabledUrnDropoffSpot != activeUrn.DropoffSpot
-                      || enabledUrnDropoffSpot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn_OrInitializing
+                      || enabledUrnDropoffSpot.VariableHistory[^1].variables.State != EUrnDropoffSpotState.ActiveForDroppedUrn
                     ) throw new Exception(nameof(enabledUrnDropoffSpot));
 
                     if (seenUrnPickup.HasValue)
@@ -798,9 +863,15 @@ namespace DeadlockDemoResearch
                         seenUrnPickup.Value.justDeleted
                         || (
                           seenUrnPickup.Value.value.Constants.Type
+                          // guaranteed there will have been two variable histories already: DroppedSpawning only ever comes after PickedUp/Returning (sort of)
                           != (activeUrn.VariableHistory[^2].holdingPlayer.Constants.Team == DeadlockDemo.TeamNumber.Amber ? EDroppedUrnType.DroppedByAmber : EDroppedUrnType.DroppedBySapphire)
                         )
                       ) throw new Exception(nameof(seenUrnPickup));
+
+                      if (players.Any(p =>
+                        p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.Holding
+                        || p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.HoldingAndReturning
+                      )) throw new Exception(nameof(players));
 
                       activeUrn.VariableHistory.Add((
                         iFrame: iFrame,
@@ -808,6 +879,18 @@ namespace DeadlockDemoResearch
                         holdingPlayer: null,
                         unheldUrn: seenUrnPickup.Value.value
                       ));
+                    }
+                    else
+                    {
+                      if (players.Any(p => 
+                        p.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding
+                        && !(
+                          // see the very special case in the WaitingForPickup->DroppedSpawning transition logic (this is checking for / allowing it)
+                          activeUrn.VariableHistory[^1].iFrame == activeUrn.VariableHistory[^2].iFrame
+                          && activeUrn.VariableHistory[^2].holdingPlayer == p
+                          && p.VariableHistory[^1].variables.UrnState == EPlayerUrnState.NotHoldingButPickingUp
+                        )
+                      )) throw new Exception(nameof(players));
                     }
                   }
                   break;
@@ -862,8 +945,9 @@ namespace DeadlockDemoResearch
       demo.PacketEvents.SvcServerInfo += (CSVCMsg_ServerInfo info) =>
       {
         if (serverInfoReceived) throw new Exception(nameof(serverInfoReceived));
+        serverInfoReceived = true;
         if (!info.HasTickInterval) throw new Exception(nameof(info.HasTickInterval));
-        const float expectedTickInterval = 1f / 60f;
+        const float expectedTickInterval = 1f / Frame.TICKS_PER_SECOND;
         // A 4 hour game would only be off by 0.01s with this error level.
         // In tests, the actual error appears to be 1/10th of this level.
         if (MathF.Abs(info.TickInterval - expectedTickInterval) > 0.00000001f) throw new Exception($"{nameof(info.TickInterval)} {info.TickInterval}");
@@ -958,8 +1042,8 @@ namespace DeadlockDemoResearch
         }
       }
 
-      if (towers.Count != 2 /*teams*/ * (4 /*tier 1's*/ + 8/*tier 3's*/)) throw new Exception(nameof(towers));
-      if (walkers.Count != 2 /*teams*/ * 4 /*lanes*/) throw new Exception(nameof(towers));
+      if (towers.Count != 2 /*teams*/ * (3 /*tier 1's*/ + 6 /*tier 3's*/)) throw new Exception(nameof(towers));
+      if (walkers.Count != 2 /*teams*/ * 3 /*lanes*/) throw new Exception(nameof(towers));
       // urn dropoff spot count checked in AfterFrame
 
       const int replayViewerTimelinePixels = 960;
@@ -1051,7 +1135,7 @@ namespace DeadlockDemoResearch
           Console.WriteLine($"Players:");
           foreach (var player in players.Indexed())
           {
-            Console.WriteLine($"{player.index}: {player.value.Constants.Name}");
+            Console.WriteLine($"{player.index}: {player.value.Constants.Name} (slot{player.value.Constants.LobbyPlayerSlot} {player.value.Constants.Team} {player.value.Constants.HeroId} {player.value.Constants.SteamId})");
           }
           continue;
         }
@@ -1168,9 +1252,9 @@ namespace DeadlockDemoResearch
           await File.WriteAllTextAsync(
             filename,
             SerializeJsonObject(
-                  /*
                   new
                   {
+                    /*
                     Players =
                       players
                       .Select(t => new
@@ -1179,6 +1263,7 @@ namespace DeadlockDemoResearch
                         Variables = t.VariableHistory.Select(v => new { v.iFrame, v.variables }),
                       })
                       .ToList(),
+                    */
                     UrnPickups =
                       urnPickups
                       .Select(p => new
@@ -1196,22 +1281,21 @@ namespace DeadlockDemoResearch
                       })
                       .ToList(),
                     UnifiedUrns =
-                  */
-                  inactiveUrns.Concat(activeUrn == null ? Enumerable.Empty<UnifiedUrnHistory>() : activeUrn.Yield())
-                  .Select(u => new
-                  {
-                    SpawnConstants = u.SpawnConstants,
-                    DropoffSpotConstants = u.DropoffSpot?.Constants,
-                    Variables = u.VariableHistory.Select(v => new
-                    {
-                      v.iFrame,
-                      v.state,
-                      Player = v.holdingPlayer?.Constants.Name,
-                      Urn = v.unheldUrn?.View.Entity.EntityIndex.Value,
-                    }),
-                  })
-                  .ToList()/*,
-              }*/
+                      inactiveUrns.Concat(activeUrn == null ? Enumerable.Empty<UnifiedUrnHistory>() : activeUrn.Yield())
+                      .Select(u => new
+                      {
+                        SpawnConstants = u.SpawnConstants,
+                        DropoffSpotConstants = u.DropoffSpot?.Constants,
+                        Variables = u.VariableHistory.Select(v => new
+                        {
+                          v.iFrame,
+                          v.state,
+                          Player = v.holdingPlayer?.Constants.Name,
+                          Urn = v.unheldUrn?.View.Entity.EntityIndex.Value,
+                        }),
+                      })
+                      .ToList(),
+              }
             )
           );
           Console.WriteLine($"Wrote to {filename}");

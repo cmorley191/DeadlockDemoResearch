@@ -9,6 +9,8 @@ namespace DeadlockDemoResearch.DataModels
 
   public record Frame
   {
+    public const float TICKS_PER_SECOND = 64.0f;
+
     public required uint iFrame { get; init; }
     public required uint iCmd { get; init; }
 
@@ -37,21 +39,21 @@ namespace DeadlockDemoResearch.DataModels
     /// Speculation:
     /// * Stays constant in the DemoTick's "PreRecord" section, then
     ///   starts counting up (3, sometimes 4, for each packet).
-    /// * Clearly follows the tick rate, which is usually 60 ticks per second.
+    /// * Clearly follows the tick rate, which is usually 64 ticks per second.
     /// * The Replay Viewer's clock zeroes at the higher-than-0 starting value. 
     ///   In other words, when the viewer's clock reads 0, this tick is at the starting
     ///   tick, not at tick 0.
     ///    * Whereas, variables like the PreGame Rules constant, "GameStartTime", count from tick 0.
     ///    * This has the annoying result that events (like GameStartTime, or pauses) tend to show
-    ///      up on the Replay Viewer's clock ~2.1s earlier than they actually happen in the viewing window.
-    ///      (2.1 = 125 / 60)
+    ///      up on the Replay Viewer's clock ~2s earlier than they actually happen in the viewing window.
+    ///      (2 = 125 / 64)
     public required uint GameTick { get; init; }
 
     /// <summary>
     /// A "real time clock" since the match server activated (a non-stopping clock from GameTick 0). 
     /// This clock seems to be the foundational reference for what other game variables go by, like Rules.GameStartTime.
     /// </summary>
-    public float GameTickTime => GameTick / 60.0f;
+    public float GameTickTime => GameTick / TICKS_PER_SECOND;
 
     /// <summary>
     /// The time shown on the top of the screen when the game was actually being played.

@@ -14,6 +14,7 @@ namespace DeadlockDemoResearch
     Dynamo = 11,
     GreyTalon = 17,
     Haze = 13,
+    Holliday = 14,
     Infernus = 1,
     Ivy = 20,
     Kelvin = 12,
@@ -26,18 +27,17 @@ namespace DeadlockDemoResearch
     Pocket = 50,
     Seven = 2,
     Shiv = 19,
+    Sinclair = 60,
     Vindicta = 3,
     Viscous = 35,
+    Vyper = 58,
     Warden = 25,
     Wraith = 7,
     Yamato = 27,
 
-    UnknownHero1 = 14,
     UnknownHero3 = 48,
     UnknownHero4 = 51,
     UnknownHero6 = 53,
-    UnknownHero7 = 58,
-    UnknownHero8 = 60,
     UnknownHero9 = 61,
   }
 }

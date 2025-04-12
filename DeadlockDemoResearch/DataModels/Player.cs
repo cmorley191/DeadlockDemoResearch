@@ -118,24 +118,50 @@ namespace DeadlockDemoResearch.DataModels
     public StateMask EnabledPredictedState => StateMask.From(pawnModifierProp.EnabledPredictedStateMask);
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool stateMaskZero(uint[] mask) =>
-      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0;
+      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0 && mask[6] == 0;
     private bool statesAccessible() =>
-      pawnModifierProp.DisabledStateMask.Length == 6
-      && pawnModifierProp.EnabledStateMask.Length == 6
-      && pawnModifierProp.EnabledPredictedStateMask.Length == 6;
+      pawnModifierProp.DisabledStateMask.Length == 7
+      && pawnModifierProp.EnabledStateMask.Length == 7
+      && pawnModifierProp.EnabledPredictedStateMask.Length == 7;
     public EPlayerUrnState UrnState =>
-      (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.ReturningIdol] & (uint)ModifierStateMask.ReturningIdol) != 0
-      ? EPlayerUrnState.HoldingAndReturning
-      : (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.HoldingIdol] & (uint)ModifierStateMask.HoldingIdol) != 0
-      ? EPlayerUrnState.Holding
-      : EPlayerUrnState.NotHolding;
+      (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.HoldingIdol] & (uint)ModifierStateMask.HoldingIdol) != 0
+      ? (
+        (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.ReturningIdol] & (uint)ModifierStateMask.ReturningIdol) != 0
+        ? EPlayerUrnState.HoldingAndReturning
+        : EPlayerUrnState.Holding
+      )
+      : (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.PickingUpIdol] & (uint)ModifierStateMask.PickingUpIdol) != 0
+        ? EPlayerUrnState.NotHoldingButPickingUp
+        : EPlayerUrnState.NotHolding;
     private bool urnStateValid()
     {
+      var pickingUp = (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.PickingUpIdol] & (uint)ModifierStateMask.PickingUpIdol) != 0;
       var holding = (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.HoldingIdol] & (uint)ModifierStateMask.HoldingIdol) != 0;
-      if (holding != ((pawnModifierProp.EnabledPredictedStateMask[(int)ModifierStateIndex.HoldingIdol] & (uint)ModifierStateMask.HoldingIdol) != 0)) return false;
+      var inReturnArea = (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.ReturnIdolArea] & (uint)ModifierStateMask.ReturnIdolArea) != 0;
       var returning = (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.ReturningIdol] & (uint)ModifierStateMask.ReturningIdol) != 0;
-      if (returning && !holding) return false;
+      var stunned = (pawnModifierProp.EnabledStateMask[(int)ModifierStateIndex.Stunned] & (uint)ModifierStateMask.Stunned) != 0;
+
+      if (pickingUp != ((pawnModifierProp.EnabledPredictedStateMask[(int)ModifierStateIndex.PickingUpIdol] & (uint)ModifierStateMask.PickingUpIdol) != 0)) return false;
+      if (holding != ((pawnModifierProp.EnabledPredictedStateMask[(int)ModifierStateIndex.HoldingIdol] & (uint)ModifierStateMask.HoldingIdol) != 0)) return false;
+      if (inReturnArea != ((pawnModifierProp.EnabledPredictedStateMask[(int)ModifierStateIndex.ReturnIdolArea] & (uint)ModifierStateMask.ReturnIdolArea) != 0)) return false;
       if (returning != ((pawnModifierProp.EnabledPredictedStateMask[(int)ModifierStateIndex.ReturningIdol] & (uint)ModifierStateMask.ReturningIdol) != 0)) return false;
+      if (stunned != ((pawnModifierProp.EnabledPredictedStateMask[(int)ModifierStateIndex.Stunned] & (uint)ModifierStateMask.Stunned) != 0)) return false;
+
+      if (holding && stunned) return false;
+
+      // unfortunately this is all we can check within a single isolated state. it'd be nice to also check...:
+      // if (pickingUp && holding) return false;
+      // - but picking up and holding aren't mutually exclusive (for a few frames "after" picking up... I suspect due to a bug)
+      //   - for the same reason, I suspect it's possible that picking up and returning aren't mutually exclusive (if you pick up an urn that's in the return area)
+      // if (returning && !(holding || stunned)) return false;
+      // - but taking damage right before you step on the return area can cause you to drop the urn *and* start "returning" it
+      //   - 16:00 in 34748372 is a good example of this
+      // - also, for some reason, getting stunned (which makes you drop urn) unsets holding, but doesn't unset returning right away
+      //   - (not sure what triggers the returning reset -- it could be the urn pickup spawning (hopefully), or someone actually picking it up (that'd be rough), or timing/arbitrary (that'd be very rough))
+      // if (returning && !inReturnArea) return false;
+      // - but the same example above (34748372) shows that inReturnArea bugs out too, and only returning is shown
+      // if (holding && inReturnArea && !returning) return false;
+      // - but there's a slight delay before returning gets set
       return true;
     }
     public Vector3 BodyPosition => MiscFunctions.ConvertVector(HeroPawn.Origin);

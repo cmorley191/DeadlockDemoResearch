@@ -52,14 +52,12 @@ namespace DeadlockDemoResearch.DataModels
   {
     public static readonly List<(DeadlockDemo.TeamNumber team, ELane lane, Vector3 position)> ExpectedStartingPositions = [
       (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-6144f, -4864f, 376f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Green,  new(-1664f, -3584f, 376f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(1664f, -4224f, 376f)),
-      (DeadlockDemo.TeamNumber.Amber, ELane.Purple, new(5504, -5120f, 376f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(-1664f, -3200f, 376f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Green, new(5504f, -5120f, 376f)),
 
       (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-5504f, 5120f, 376f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green,  new(-1664f, 4224f, 376f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(1672f, 3584f, 376f)),
-      (DeadlockDemo.TeamNumber.Sapphire, ELane.Purple, new(6144f, 4864f, 376f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(1672f, 3200f, 376f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green, new(6144f, 4864f, 376f)),
     ];
 
 
@@ -108,12 +106,12 @@ namespace DeadlockDemoResearch.DataModels
     public ESubclassId Subclass => (ESubclassId)Entity.SubclassID.Value;
     private bool subclassValid() =>
       Entity.SubclassID.Value == (uint)(
-        (Lane == ELane.Yellow || Lane == ELane.Purple)
+        (Lane == ELane.Yellow || Lane == ELane.Green)
         ? (Team == DeadlockDemo.TeamNumber.Amber ? ESubclassId.WalkerOutsideLanesAmber : ESubclassId.WalkerOutsideLanesSapphire)
         : (Team == DeadlockDemo.TeamNumber.Amber ? ESubclassId.WalkerInsideLanesAmber : ESubclassId.WalkerInsideLanesSapphire)
       );
     public int MaxHealth => Entity.MaxHealth;
-    private bool maxHealthValid() => Entity.MaxHealth == ((Lane == ELane.Yellow || Lane == ELane.Purple) ? 5175 : 8000); // middle lane 5800 pre 11-21
+    private bool maxHealthValid() => Entity.MaxHealth == ((Lane == ELane.Yellow || Lane == ELane.Green) ? 7000 : 9000);
 
     //public NpcStateMasks NpcState => (NpcStateMasks)Entity.NPCState;
     private bool npcStateValid() => (int)Entity.NPCState >= (int)NpcStateMasks.MIN && (int)Entity.NPCState <= (int)NpcStateMasks.MAX;
@@ -123,7 +121,7 @@ namespace DeadlockDemoResearch.DataModels
     private bool modifierPropAccessible() => Entity.ModifierProp != null;
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool stateMaskZero(uint[] mask) =>
-      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0;
+      mask[0] == 0 && mask[1] == 0 && mask[2] == 0 && mask[3] == 0 && mask[4] == 0 && mask[5] == 0 && mask[6] == 0;
     //public StateMask EnabledState => StateMask.From(modifierProp.EnabledStateMask);
     public bool IsVulnerable => (modifierProp.EnabledStateMask[(int)ModifierStateIndex.Invulnerable] & (uint)ModifierStateMask.Invulnerable) == 0;
     public bool IsFrozenByKelvinUlt => (modifierProp.EnabledStateMask[(int)ModifierStateIndex.NoIncomingDamage] & (uint)ModifierStateMask.NoIncomingDamage) != 0;
@@ -131,9 +129,9 @@ namespace DeadlockDemoResearch.DataModels
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool allSame(bool x, bool y, bool z) => (x == y) && (x == z);
     private bool statesAccessible() =>
-      modifierProp.DisabledStateMask.Length == 6
-      && modifierProp.EnabledStateMask.Length == 6
-      && modifierProp.EnabledPredictedStateMask.Length == 6;
+      modifierProp.DisabledStateMask.Length == 7
+      && modifierProp.EnabledStateMask.Length == 7
+      && modifierProp.EnabledPredictedStateMask.Length == 7;
     private bool statesValid() => 
       stateMaskZero(modifierProp.DisabledStateMask)
       && stateMaskZero(modifierProp.EnabledPredictedStateMask)
