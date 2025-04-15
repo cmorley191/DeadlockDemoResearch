@@ -225,6 +225,7 @@ namespace DeadlockDemoResearch
                 && trooperEntity.IsAlive
               )
               {
+                // existingHistory is losing ownership of this trooperEntity
                 trooperLosingOwnership = existingHistory;
                 trooper = new TrooperHistory(existingHistory.View, iEntityOwnership: existingHistory.IEntityOwnership + 1);
                 newTrooper = true;
@@ -291,25 +292,29 @@ namespace DeadlockDemoResearch
             }
           }
 
-          if (thisFrameDiedZiplineTroopers.Count != thisFrameBornActiveTroopers.Count) throw new Exception(nameof(thisFrameDiedZiplineTroopers));
-          foreach (var (diedZiplineTroopersGroup, bornActiveTroopersGroup) in
+          var thisFrameDiedZiplineTroopersGrouped =
             thisFrameDiedZiplineTroopers
             .Select(zt => new { zt, ut = allUnifiedTroopers.Single(ut => ut.ZiplineTrooper == zt) })
             .GroupBy(zt => zt.zt.Constants.Team == DeadlockDemo.TeamNumber.Amber ? (int)zt.zt.Constants.Lane : -(int)zt.zt.Constants.Lane)
-            .OrderBy(g => g.Key)
-            .Zip(
-              thisFrameBornActiveTroopers
-              .GroupBy(at => at.Constants.Team == DeadlockDemo.TeamNumber.Amber ? (int)at.Constants.Lane : -(int)at.Constants.Lane)
-              .OrderBy(g => g.Key)
-            )
-          )
+            .ToDictionary(g => g.Key, g => g.AsEnumerable());
+          var thisFrameBornActiveTroopersGrouped =
+            thisFrameBornActiveTroopers
+            .GroupBy(at => at.Constants.Team == DeadlockDemo.TeamNumber.Amber ? (int)at.Constants.Lane : -(int)at.Constants.Lane)
+            .ToDictionary(g => g.Key, g => g.AsEnumerable());
+          if (thisFrameBornActiveTroopersGrouped.Keys.Any(k => !thisFrameDiedZiplineTroopersGrouped.ContainsKey(k))) throw new Exception(nameof(thisFrameBornActiveTroopersGrouped));
+
+          foreach (var k in thisFrameDiedZiplineTroopersGrouped.Keys)
           {
-            if (diedZiplineTroopersGroup.Key != bornActiveTroopersGroup.Key) throw new Exception(nameof(diedZiplineTroopersGroup));
+            var diedZiplineTroopers = thisFrameDiedZiplineTroopersGrouped[k].ToList();
+            var bornActiveTroopers = thisFrameBornActiveTroopersGrouped.GetValueOrDefault(k, defaultValue: []).ToList();
 
-            var diedZiplineTroopers = diedZiplineTroopersGroup.ToList();
-            var bornActiveTroopers = bornActiveTroopersGroup.ToList();
-
-            if (diedZiplineTroopers.Count != bornActiveTroopers.Count) throw new Exception(nameof(diedZiplineTroopers));
+            if (!(
+              diedZiplineTroopers.Count == bornActiveTroopers.Count
+              || (
+                diedZiplineTroopers.Count > bornActiveTroopers.Count
+                && diedZiplineTroopers.Count(zt => zt.zt.IsBuggedSpawnZipline) >= (diedZiplineTroopers.Count - bornActiveTroopers.Count)
+              )
+            )) throw new Exception(nameof(bornActiveTroopers));
 
             if (diedZiplineTroopers.Count == 1)
             {
@@ -317,8 +322,11 @@ namespace DeadlockDemoResearch
               continue;
             }
 
-            // minimize distances from activeTrooper spawn point to the ziplineTrooper (lastLifeFrame->firstDeathFrame) line segment
-            float[,] distanceMatrix = new float[diedZiplineTroopers.Count, bornActiveTroopers.Count];
+            // Hungarian algorithm: minimize distances from activeTrooper spawn point to the ziplineTrooper death point (lastLifeFrame->firstDeathFrame) line segment.
+            // Bugged spawn zipline troopers might fall out of the world, resulting in no born active trooper.
+            //   (i.e., more zipline troopers died than active troopers were spawned)
+            //   In this case add dummy active troopers that zipline troopers can be assigned to as a last resort (high distance).
+            float[,] distanceMatrix = new float[diedZiplineTroopers.Count, diedZiplineTroopers.Count];
             foreach (var zt in diedZiplineTroopers.Indexed())
             {
               var ztLastAlivePosition = zt.value.zt.VariableHistory[^2].variables.Position;
@@ -341,19 +349,33 @@ namespace DeadlockDemoResearch
                   distanceMatrix[zt.index, at.index] = Vector3.DistanceSquared(atPosition, ztLastAlivePosition + (nearestParametricAlongZTMotion * ztMotionVector));
                 }
               }
+              // dummy active troopers
+              foreach (var i in bornActiveTroopers.Count.Through(diedZiplineTroopers.Count - 1))
+              {
+                // The map size is ~30_000 by ~30_000, so a distance of 200_000 should be higher than any distance we'll see.
+                distanceMatrix[zt.index, i] = 200_000f * 200_000f; // DistanceSquared
+              }
             }
 
             var matchings = new HungarianAlgorithm(distanceMatrix).Run();
             if (matchings == null) throw new NullReferenceException(nameof(matchings));
 
-            var matchedActiveTrooper = new bool[bornActiveTroopers.Count];
+            var matchedActiveTrooper = new bool[diedZiplineTroopers.Count]; // includes dummies
             foreach (var (zt, iAT) in diedZiplineTroopers.Zip(matchings))
             {
-              if (!bornActiveTroopers.TryGet(iAT, out var at)) throw new Exception(nameof(iAT));
+              if (!(iAT >= 0 && iAT < diedZiplineTroopers.Count)) throw new Exception(nameof(iAT));
               if (matchedActiveTrooper[iAT]) throw new Exception(nameof(matchedActiveTrooper));
-              if (zt.ut.ActiveTrooper != null) throw new Exception(nameof(zt.ut.ActiveTrooper));
-              zt.ut.SetActiveTrooper(at);
               matchedActiveTrooper[iAT] = true;
+              if (bornActiveTroopers.TryGet(iAT, out var at))
+              {
+                if (zt.ut.ActiveTrooper != null) throw new Exception(nameof(zt.ut.ActiveTrooper));
+                zt.ut.SetActiveTrooper(at);
+              }
+              else
+              {
+                // leave unmatched - this is probably a bugged spawn zipline that fell out of the world
+                if (zt.ut.VariableHistory.Last().state != EUnifiedTrooperState.Packed_DeadBuggedFellOutOfWorld) throw new Exception(nameof(iAT));
+              }
             }
           }
         }
@@ -1034,6 +1056,17 @@ namespace DeadlockDemoResearch
 
       {
         Console.WriteLine($"Note: {allUnifiedTroopers.Count(t => t.ZiplineConstants.IsNonStarter)} non-starter troopers ({allUnifiedTroopers.Count} total)");
+        var buggedSpawnFloatingZiplineTroopers = allTroopers.Count(t => t.IsBuggedSpawnZipline && t.VariableHistory.Count > 1);
+        if (buggedSpawnFloatingZiplineTroopers != 0)
+        {
+          var buggedSpawnFloatingZiplineFellOutOfWorldTroopers = allUnifiedTroopers.Count(ut => 
+            ut.VariableHistory.Last().state is (
+              EUnifiedTrooperState.Packed_DeadBuggedFellOutOfWorld 
+              or EUnifiedTrooperState.Unpacked_InactiveBuggedFellOutOfWorld
+            )
+          );
+          Console.WriteLine($"Warning: {buggedSpawnFloatingZiplineTroopers} troopers with wrong zipline spawn floating bug. {buggedSpawnFloatingZiplineFellOutOfWorldTroopers} of these fell out of the world.");
+        }
         var unifiedSubtroopers = new HashSet<TrooperHistory>();
         foreach (var ut in allUnifiedTroopers)
         {
@@ -1176,6 +1209,7 @@ namespace DeadlockDemoResearch
               .Select(t => new
               {
                 ZiplineConstants = t.ZiplineConstants,
+                IsBuggedSpawnZipline = t.ZiplineTrooper.IsBuggedSpawnZipline,
                 ActiveConstants = t.ActiveTrooper?.constants,
                 Variables = t.VariableHistory.Select(v => new { v.iFrame, v.pvsState, v.state, v.variables }),
               })

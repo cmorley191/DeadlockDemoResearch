@@ -71,6 +71,16 @@ namespace DeadlockDemoResearch.DataModels
     public required int MaxHealth { get; init; }
     public required bool IsAlive { get; init; }
 
+    public static readonly List<(DeadlockDemo.TeamNumber team, ELane lane, Vector3 position)> ExpectedZiplineSpawnPositions = [
+      (DeadlockDemo.TeamNumber.Amber, ELane.Yellow, new(-240f, -11328f, 1312f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Blue,   new(0f, -11328f, 1312f)),
+      (DeadlockDemo.TeamNumber.Amber, ELane.Green, new(240f, -11328f, 1312f)),
+
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Yellow, new(-240f, 11328f, 1312f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Blue,   new(0f, 11328f, 1312f)),
+      (DeadlockDemo.TeamNumber.Sapphire, ELane.Green, new(240f, 11328f, 1312f)),
+    ];
+
     public static TrooperVariables CopyFrom(ITrooperVariables other) => new()
     {
       //NpcState = other.NpcState,
@@ -133,7 +143,11 @@ namespace DeadlockDemoResearch.DataModels
     public float Yaw => Entity.Rotation.Yaw;
     public float Pitch => Entity.Rotation.Pitch;
     public int Health => Entity.Health;
-    private bool healthValid() => Entity.IsAlive ? Entity.Health > 0 : (Entity.Health >= 0 && Entity.Health <= 1);
+    // After death, the health can just increase for no reason (sometimes from 0 to 1, sometimes from 1 to random other values)
+    // Would like to check:
+    // && (Entity.MaxHealth == 0 || Entity.Health <= Entity.MaxHealth)
+    // but when max health increases in game, Health can actually increase *first* for a few frames before MaxHealth is updated
+    private bool healthValid() => !Entity.IsAlive || Entity.Health > 0;
     public int MaxHealth => Entity.MaxHealth;
     private bool maxHealthValid() => Entity.MaxHealth >= 0;
     public bool IsAlive => Entity.IsAlive;
@@ -152,11 +166,21 @@ namespace DeadlockDemoResearch.DataModels
       if (!View.AllAccessible() || !View.ConstantsValid()) throw new Exception(nameof(View));
       IEntityOwnership = iEntityOwnership;
       Constants = TrooperConstants.CopyFrom(view);
+      if (Constants.Subclass == ETrooperSubclassId.ZiplinePackage)
+      {
+        if (!View.VariablesValid()) throw new Exception(nameof(View));
+        IsBuggedSpawnZipline = View.Position != TrooperVariables.ExpectedZiplineSpawnPositions.First(p => p.team == Constants.Team && p.lane == Constants.Lane).position;
+      }
+      else
+      {
+        IsBuggedSpawnZipline = false;
+      }
     }
 
     public TrooperView View { get; private init; }
     public int IEntityOwnership { get; private init; }
     public TrooperConstants Constants { get; private init; }
+    public bool IsBuggedSpawnZipline { get; private init; }
     public List<(uint iFrame, EEntityPvsState pvsState, TrooperVariables variables)> VariableHistory { get; } = [];
 
     public bool OwnsEntity { get; private set; } = true;
@@ -272,7 +296,7 @@ namespace DeadlockDemoResearch.DataModels
 
           if (
             (state == EUnifiedTrooperState.Packed_Ziplining || state == EUnifiedTrooperState.Packed_DroppingOffZipline)
-            && ZiplineTrooper.VariableHistory[i].variables.Health == 0
+            && !ZiplineTrooper.VariableHistory[i].variables.IsAlive
           ) state = EUnifiedTrooperState.Unpacked_Active;
 
           if (
@@ -305,7 +329,56 @@ namespace DeadlockDemoResearch.DataModels
           case EUnifiedTrooperState.Unpacked_SelfDestructing:
           case EUnifiedTrooperState.Unpacked_Dead:
             {
+              // Match 34863322 has several examples of bugged spawn zipline troopers floating through terrain.
+              //   (some of them fall out of the world; some of them actually just float to the zipline dropoff point and dropoff as normal??).
+              // The under-terrain killbox appears to be around -4300, at least in some spots. The legal terrain is probably mostly above 0?
+              if (ZiplineTrooper.IsBuggedSpawnZipline && ZiplineTrooper.VariableHistory[i].variables.Position.Z <= -2000)
+              {
+                if (ActiveTrooper == null)
+                {
+                  state = EUnifiedTrooperState.Packed_DeadBuggedFellOutOfWorld;
+
+                  for (; true; i++)
+                  {
+                    if (i >= ZiplineTrooper.VariableHistory.Count) yield break;
+                    yield return (
+                      iFrame: ZiplineTrooper.VariableHistory[i].iFrame,
+                      pvsState: ZiplineTrooper.VariableHistory[i].pvsState,
+                      state,
+                      variables: ZiplineTrooper.VariableHistory[i].variables
+                    );
+                  }
+                }
+                else
+                {
+                  if (!(
+                    Vector3.DistanceSquared(ActiveTrooper.Value.trooper.VariableHistory[0].variables.Position, ZiplineTrooper.VariableHistory[i].variables.Position) <= 100f * 100f
+                    && (
+                      ActiveTrooper.Value.trooper.VariableHistory.Count == 1
+                      || (
+                        ActiveTrooper.Value.trooper.VariableHistory[1].variables.Position == ActiveTrooper.Value.trooper.VariableHistory[0].variables.Position
+                        && ActiveTrooper.Value.trooper.VariableHistory[1].pvsState == EEntityPvsState.InactiveButPresent
+                      )
+                    )
+                  )) throw new Exception(nameof(EUnifiedTrooperState.Unpacked_InactiveBuggedFellOutOfWorld));
+
+                  state = EUnifiedTrooperState.Unpacked_InactiveBuggedFellOutOfWorld;
+
+                  for (i = 0; true; i++)
+                  {
+                    if (i >= ActiveTrooper.Value.trooper.VariableHistory.Count) yield break;
+                    yield return (
+                      iFrame: ActiveTrooper.Value.trooper.VariableHistory[i].iFrame,
+                      pvsState: ActiveTrooper.Value.trooper.VariableHistory[i].pvsState,
+                      state,
+                      variables: ActiveTrooper.Value.trooper.VariableHistory[i].variables
+                    );
+                  }
+                }
+              }
+
               if (ActiveTrooper == null) throw new NullReferenceException(nameof(ActiveTrooper));
+
               for (i = 0; true; i++)
               {
                 if (i >= ActiveTrooper.Value.trooper.VariableHistory.Count) yield break;

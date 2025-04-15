@@ -170,6 +170,9 @@ namespace DeadlockDemoResearch.DataModels
     public byte Level => (byte)HeroPawn.Level;
     private bool levelAccessible() => HeroPawn.Level >= byte.MinValue && HeroPawn.Level <= byte.MaxValue;
     public int Health => HeroPawn.Health;
+    // Would like to check:
+    // && (HeroPawn.MaxHealth == 0 || HeroPawn.Health <= HeroPawn.MaxHealth)
+    // but when max health increases in game, Health can actually increase *first* for a few frames before MaxHealth is updated
     private bool healthValid() => HeroPawn.Health >= 0 && Controller.Health == 0;
     public int MaxHealth => HeroPawn.MaxHealth;
     private bool maxHealthValid() => HeroPawn.MaxHealth >= 0 && Controller.MaxHealth == 0;

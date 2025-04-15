@@ -157,6 +157,9 @@ namespace DeadlockDemoResearch.DataModels
     public float Yaw => Entity.Rotation.Yaw;
     public float Pitch => Entity.Rotation.Pitch;
     public int Health => Entity.Health;
+    // Would like to check:
+    // && (Entity.MaxHealth == 0 || Entity.Health <= Entity.MaxHealth)
+    // but when max health increases in game, Health can actually increase *first* for a few frames before MaxHealth is updated
     private bool healthValid() => Entity.IsAlive ? Entity.Health > 0 : Entity.Health == 0;
 
 

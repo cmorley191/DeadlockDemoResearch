@@ -741,9 +741,11 @@ namespace DeadlockDemoResearch.DataModels
     Packed_WaitingToZipline = 1,
     Packed_Ziplining = 2,
     Packed_DroppingOffZipline = 3,
-    Unpacked_Active = 4,
-    Unpacked_SelfDestructing = 5,
-    Unpacked_Dead = 6,
+    Packed_DeadBuggedFellOutOfWorld = 4,
+    Unpacked_InactiveBuggedFellOutOfWorld = 5,
+    Unpacked_Active = 6,
+    Unpacked_SelfDestructing = 7,
+    Unpacked_Dead = 8,
   }
 
   public enum EUrnDropoffSpot
