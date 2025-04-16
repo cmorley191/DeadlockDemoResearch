@@ -39,7 +39,7 @@ namespace DeadlockDemoResearch
       if (args.Length == 0)
       {
         Console.WriteLine($"(note: you can provide directories as the command line arguments to this program to save time)");
-        Console.WriteLine($"Enter the directories to search for demo files, one on each line. Enter an empty line at the end of the list:");
+        Console.WriteLine($"Enter the directories to search for demo files, one directory on each line. Enter an empty line at the end of the list:");
         Console.WriteLine($@"  (e.g. C:\path\to\Steam\steamapps\common\Deadlock\game\citadel\replays )");
         demoDirectories = [];
         while (true)
