@@ -89,6 +89,7 @@ namespace DeadlockDemoResearch.DataModels
     SoulOrbPlayer = 3027388212,
     SoulOrbTowersWalkers = 2172658167,
     SoulOrbTrooper = 494398941,
+    SoulOrbMcGinnisTurret = 2222749624,
   }
 
   public enum ETrooperSubclassId : uint
@@ -115,6 +116,7 @@ namespace DeadlockDemoResearch.DataModels
     SoulOrbPlayer = ESubclassId.SoulOrbPlayer,
     SoulOrbTowersWalkers = ESubclassId.SoulOrbTowersWalkers,
     SoulOrbTrooper = ESubclassId.SoulOrbTrooper,
+    SoulOrbMcGinnisTurret = ESubclassId.SoulOrbMcGinnisTurret,
   }
 
   // re-generate these from !GlobalTypes.json with generate_modifier_states.py

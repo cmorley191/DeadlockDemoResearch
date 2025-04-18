@@ -11,6 +11,8 @@ namespace DeadlockDemoResearch.DataModels
     public float CreateTime { get; }
     public DeadlockDemo.TeamNumber Team { get; }
     public float TimeLaunch { get; }
+    public float AttackableTime { get; }
+    public int LaunchNum { get; }
 
     public ulong InteractsAs { get; }
     public ulong InteractsWith { get; }
@@ -26,6 +28,8 @@ namespace DeadlockDemoResearch.DataModels
     public required float CreateTime { get; init; }
     public required DeadlockDemo.TeamNumber Team { get; init; }
     public required float TimeLaunch { get; init; }
+    public required float AttackableTime { get; init; }
+    public required int LaunchNum { get; init; }
 
     public required ulong InteractsAs { get; init; }
     public static readonly List<ulong> PlaceholderInteractsAsValues = [131072, 4297195520, 2149711872];
@@ -48,6 +52,8 @@ namespace DeadlockDemoResearch.DataModels
       CreateTime = other.CreateTime,
       Team = other.Team,
       TimeLaunch = other.TimeLaunch,
+      AttackableTime = other.AttackableTime,
+      LaunchNum = other.LaunchNum,
 
       InteractsAs = other.InteractsAs,
       InteractsWith = other.InteractsWith,
@@ -97,11 +103,13 @@ namespace DeadlockDemoResearch.DataModels
 
     public float SimulationTime => Entity.SimulationTime;
     public Vector3 Position => MiscFunctions.ConvertVector(Entity.Origin);
+    public float AttackableTime => Entity.AttackableTime.Value;
+    public int LaunchNum => Entity.LaunchNum;
     private bool modifierPropInaccessible() => Entity.ModifierProp == null;
 
 
     public bool AllAccessible() => modifierPropInaccessible();
-    public bool ConstantsValid() => /*subclassValid() &&*/ interpolationFrameValid() && teamValid();
+    public bool ConstantsValid() => subclassValid() && interpolationFrameValid() && teamValid();
     public bool VariablesValid() => true;
   }
 
@@ -119,7 +127,7 @@ namespace DeadlockDemoResearch.DataModels
     public (uint iFrame, SoulOrbConstants constants)? SubsequentConstants { get; private set; } = null;
     public List<(uint iFrame, EEntityPvsState pvsState, SoulOrbVariables variables)> VariableHistory { get; } = [];
 
-    public void AfterFrame(Frame frame, EEntityPvsState pvsState)
+    public void AfterFrame(Frame previousFrame, Frame currentFrame, float gameStartTime, EEntityPvsState pvsState)
     {
       if (!View.AllAccessible() || !View.VariablesValid()) throw new Exception();
 
@@ -128,7 +136,7 @@ namespace DeadlockDemoResearch.DataModels
       {
         if (frameConstants != FirstFrameConstants)
         {
-          SubsequentConstants = (frame.iFrame, frameConstants);
+          SubsequentConstants = (currentFrame.iFrame, frameConstants);
         }
       }
       else
@@ -146,12 +154,93 @@ namespace DeadlockDemoResearch.DataModels
 
       if (
         VariableHistory.Count == 0
+        || frameVariables.SimulationTime != VariableHistory[^1].variables.SimulationTime
+      )
+      {
+        // if a simulation time update is occurring, it should be the correct time
+        if (!(
+          frameVariables.SimulationTime > previousFrame.GameTickTime
+          && frameVariables.SimulationTime <= currentFrame.GameTickTime
+        )) throw new Exception();
+      }
+
+      var simulationGameClockTime = currentFrame.GameClockTime - (currentFrame.GameTickTime - frameVariables.SimulationTime);
+      var launchSimulationGameClockTime = FirstFrameConstants.TimeLaunch - gameStartTime;
+
+      if (VariableHistory.Count == 0)
+      {
+        var launchDelay = launchSimulationGameClockTime - simulationGameClockTime;
+        var attackableDelay = FirstFrameConstants.AttackableTime - FirstFrameConstants.TimeLaunch;
+        if (FirstFrameConstants.Subclass is (ESoulOrbSubclassId.SoulOrbFountain or ESoulOrbSubclassId.SoulOrbTrooper))
+        {
+          if (!(launchDelay >= 0.4f && launchDelay <= 0.7f)) throw new Exception();
+          if (!(MathF.Abs(attackableDelay - 0.2f) < 0.001f)) throw new Exception();
+        } 
+        else
+        {
+          if (!(MathF.Abs(launchDelay - 0.3f) < 0.001f)) throw new Exception();
+          if (!(MathF.Abs(attackableDelay - 0.12f) < 0.001f)) throw new Exception();
+        }
+      }
+      else if (previousFrame.GameTick == currentFrame.GameTick)
+      {
+        if (frameVariables.SimulationTime != VariableHistory[^1].variables.SimulationTime) throw new Exception();
+      }
+      else
+      {
+        if (
+          previousFrame.GameClockPaused && currentFrame.GameClockPaused
+          || pvsState != EEntityPvsState.Active
+        )
+        {
+          // if we're paused or inactive, simulation time shouldn't be updating
+          if (frameVariables.SimulationTime != VariableHistory[^1].variables.SimulationTime) throw new Exception();
+        }
+        else
+        {
+          // if we're unpaused and active, and...
+          if (simulationGameClockTime >= launchSimulationGameClockTime)
+          {
+            // if we've definitely launched, simulation time should be updating
+            if (frameVariables.SimulationTime == VariableHistory[^1].variables.SimulationTime) throw new Exception();
+          }
+          else if (VariableHistory.Count >= 2 && VariableHistory[^1].iFrame == previousFrame.iFrame)
+          {
+            // we definitely didn't launch in the *last* frame transition, so simulation time shouldn't have been updating
+            if (VariableHistory[^1].variables.SimulationTime != VariableHistory[^2].variables.SimulationTime) throw new Exception();
+          }
+          // the above logic leaves open the case "we are about to launch between this frame and the next", which is optional - sometimes sim time updates, sometimes it doesn't
+        }
+      }
+
+      if (
+        VariableHistory.Count == 0
         || pvsState != VariableHistory[^1].pvsState
         || frameVariables != VariableHistory[^1].variables
       )
       {
-        VariableHistory.Add((frame.iFrame, pvsState, frameVariables));
+        VariableHistory.Add((currentFrame.iFrame, pvsState, frameVariables));
       }
+      
+
+      /*
+      if (!(
+        View.SimulationTime > previousFrame.GameTickTime
+        && View.SimulationTime <= currentFrame.GameTickTime
+      )) throw new Exception();
+
+      if (VariableHistory.Count == 1)
+      {
+        var launchGameClockTime = FirstFrameConstants.TimeLaunch - gameStartTime;
+        var launchDelay = launchGameClockTime - currentFrame.GameClockTime;
+        if (!(launchDelay >= 0.4 && launchDelay <= 0.7)) throw new Exception();
+        var attackableDelay = FirstFrameConstants.AttackableTime - FirstFrameConstants.TimeLaunch;
+        if (!(
+          Math.Abs(attackableDelay - 0.2) < 0.001f
+          || Math.Abs(attackableDelay - 0.12) < 0.001f
+        )) throw new Exception();
+      }
+      */
     }
   }
 }

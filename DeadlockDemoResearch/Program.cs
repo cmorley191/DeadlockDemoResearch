@@ -120,6 +120,17 @@ namespace DeadlockDemoResearch
             demo.CurrentGameTick.Value,
             matchId
           );
+
+          if (previousFrame != null)
+          {
+            var gameTickDiff = demo.CurrentGameTick.Value - previousFrame.GameTick;
+            if (demo.CurrentDemoTick.Value - previousFrame.DemoTick != gameTickDiff) throw new Exception();
+            if (gameTickDiff == 0) Console.WriteLine($"Note: duplicate game tick at frame {iFrame}");
+            else if (gameTickDiff < 3) Console.WriteLine($"Warning: short duration of frame {iFrame}");
+            else if (gameTickDiff > 4) Console.WriteLine($"Warning: long duration of frame {iFrame}");
+          }
+
+
         }
 
         if (thisFrameMatchClockEvent != null)
@@ -147,6 +158,7 @@ namespace DeadlockDemoResearch
             ),
           GameClockSection =
             (uint?)rules?.VariableHistory.Count(v => v.newMatchClock.HasValue) ?? 0,
+          PostGame = rules != null && rules.VariableHistory[^1].variables.GameState == ERulesPermittedGameState.PostGame,
 
           ReplayClockTime =
             lastMatchClockEvent == null
@@ -166,6 +178,16 @@ namespace DeadlockDemoResearch
         };
         frames.Add(frame);
         //Console.WriteLine(frame);
+
+        if (
+          previousFrame != null
+          && previousFrame.GameTick != frame.GameTick
+          && previousFrame.GameClockPaused == frame.GameClockPaused
+          && (
+            previousFrame.GameClockPaused
+            != (previousFrame.GameClockTime == frame.GameClockTime)
+          )
+        ) throw new Exception();
 
         thisFrameNetTicks.Clear();
         thisFrameMatchClockEvent = null;
@@ -926,33 +948,40 @@ namespace DeadlockDemoResearch
         }
 
         {
-          var seenSoulOrbs = new HashSet<SoulOrbHistory>();
-          foreach (var soulOrbEntity in demo.Entities.OfType<DeadlockDemo.CItemXP>()) // no, compiler, this won't result in an empty sequence you dummy
+          if (previousFrame == null || rules?.PreGameConstants == null)
           {
-            SoulOrbHistory soulOrb;
-            if (soulOrbs.TryGetValue(soulOrbEntity, out var existingHistory))
-            {
-              soulOrb = existingHistory;
-            }
-            else
-            {
-              var view = new SoulOrbView { Entity = soulOrbEntity };
-              soulOrb = new SoulOrbHistory(view);
-              soulOrbs.Add(soulOrbEntity, soulOrb);
-            }
-
-            var pvsState = soulOrbEntity.IsActive ? EEntityPvsState.Active : EEntityPvsState.InactiveButPresent;
-
-            if (seenSoulOrbs.Contains(soulOrb)) throw new Exception(nameof(seenSoulOrbs));
-            seenSoulOrbs.Add(soulOrb);
-            soulOrb.AfterFrame(frame, pvsState);
-          }
-
-          foreach (var soulOrb in soulOrbs)
+            if (demo.Entities.OfType<DeadlockDemo.CItemXP>().Any()) throw new Exception();
+          } 
+          else
           {
-            if (!seenSoulOrbs.Contains(soulOrb.Value))
+            var seenSoulOrbs = new HashSet<SoulOrbHistory>();
+            foreach (var soulOrbEntity in demo.Entities.OfType<DeadlockDemo.CItemXP>()) // no, compiler, this won't result in an empty sequence you dummy
             {
-              soulOrb.Value.AfterFrame(frame, pvsState: EEntityPvsState.Deleted);
+              SoulOrbHistory soulOrb;
+              if (soulOrbs.TryGetValue(soulOrbEntity, out var existingHistory))
+              {
+                soulOrb = existingHistory;
+              }
+              else
+              {
+                var view = new SoulOrbView { Entity = soulOrbEntity };
+                soulOrb = new SoulOrbHistory(view);
+                soulOrbs.Add(soulOrbEntity, soulOrb);
+              }
+
+              var pvsState = soulOrbEntity.IsActive ? EEntityPvsState.Active : EEntityPvsState.InactiveButPresent;
+
+              if (seenSoulOrbs.Contains(soulOrb)) throw new Exception(nameof(seenSoulOrbs));
+              seenSoulOrbs.Add(soulOrb);
+              soulOrb.AfterFrame(previousFrame, frame, rules.PreGameConstants.GameStartTime, pvsState);
+            }
+
+            foreach (var soulOrb in soulOrbs)
+            {
+              if (!seenSoulOrbs.Contains(soulOrb.Value))
+              {
+                soulOrb.Value.AfterFrame(previousFrame, frame, rules.PreGameConstants.GameStartTime, pvsState: EEntityPvsState.Deleted);
+              }
             }
           }
         }

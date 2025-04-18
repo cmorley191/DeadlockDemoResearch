@@ -71,13 +71,17 @@ namespace DeadlockDemoResearch.DataModels
     public required float GameClockTime { get; init; }
 
     /// <summary>
-    /// How many times the GameClockTime clock has been frozen or resumed.
+    /// How many times the GameClockTime clock has been frozen or resumed (or reached PostGame).
     /// </summary>
     public required uint GameClockSection { get; init; }
     /// <summary>
+    /// A final GameClockSection is created in PostGame *BUT* without pausing the clock - this supports GameClockPaused logic.
+    /// </summary>
+    public required bool PostGame { get; init; }
+    /// <summary>
     /// Whether or not the clock is stopped in this section (including the very first section before PreGame).
     /// </summary>
-    public bool GameClockPaused => GameClockSection % 2 == 0;
+    public bool GameClockPaused => !PostGame && GameClockSection % 2 == 0;
 
     /// <summary>
     /// The clock shown when the game is viewed in the Replay Viewer.
