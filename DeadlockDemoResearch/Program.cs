@@ -868,6 +868,8 @@ namespace DeadlockDemoResearch
                       }
                     }
 
+                    var activeUrnIVariableHistoryLatestPickup = 
+                      activeUrn?.VariableHistory.FindLastIndex(v => v.state is (EUnifiedUrnState.WaitingForFirstPickup or EUnifiedUrnState.DroppedSpawned)) + 1;
                     foreach (var player in players)
                     {
                       if (player.VariableHistory[^1].iFrame != iFrame) continue;
@@ -887,7 +889,26 @@ namespace DeadlockDemoResearch
                         && player == activeUrn.VariableHistory[^1].holdingPlayer
                       ))
                       {
-                        if (player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding) throw new Exception(nameof(player));
+                        if (
+                          activeUrn != null 
+                          && activeUrnIVariableHistoryLatestPickup != null
+                          // bug: when multiple players are picking up, the unsuccessful player's state can take a few frames to *stop* picking up after the successful player picks up
+                          // (we're allowing "a few frames" to be up to 1 second here)
+                          // match 34946961 has a couple examples of this: 45:00 and 51:00
+                          && (
+                            activeUrn.VariableHistory[^1].state == EUnifiedUrnState.PickedUp
+                            || activeUrn.VariableHistory[^1].state == EUnifiedUrnState.Returning
+                          )
+                          && (frame.GameClockTime - frames[(int)(activeUrn.VariableHistory[activeUrnIVariableHistoryLatestPickup.Value].iFrame)].GameClockTime) < 1f
+                          && player.VariableHistory[^2].variables.UrnState == EPlayerUrnState.NotHoldingButPickingUp
+                        )
+                        {
+                          if (player.VariableHistory[^1].variables.UrnState is not (EPlayerUrnState.NotHolding or EPlayerUrnState.NotHoldingButPickingUp)) throw new Exception(nameof(player));
+                        }
+                        else
+                        {
+                          if (player.VariableHistory[^1].variables.UrnState != EPlayerUrnState.NotHolding) throw new Exception(nameof(player));
+                        } 
                       }
                     }
                   }
