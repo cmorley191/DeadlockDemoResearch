@@ -13,11 +13,6 @@ namespace DeadlockDemoResearch.DataModels
     public float TimeLaunch { get; }
     public float AttackableTime { get; }
     public int LaunchNum { get; }
-
-    public ulong InteractsAs { get; }
-    public ulong InteractsWith { get; }
-    public ulong InteractsExclude { get; }
-    public byte CollisionFunctionMask { get; }
   }
 
   public record SoulOrbConstants : ISoulOrbConstants
@@ -31,6 +26,29 @@ namespace DeadlockDemoResearch.DataModels
     public required float AttackableTime { get; init; }
     public required int LaunchNum { get; init; }
 
+    public static SoulOrbConstants CopyFrom(ISoulOrbConstants other) => new()
+    {
+      EntityIndex = other.EntityIndex,
+      Subclass = other.Subclass,
+      InterpolationFrame = other.InterpolationFrame,
+      CreateTime = other.CreateTime,
+      Team = other.Team,
+      TimeLaunch = other.TimeLaunch,
+      AttackableTime = other.AttackableTime,
+      LaunchNum = other.LaunchNum,
+    };
+  }
+
+  public interface ISoulOrbOneChangeConstants
+  {
+    public ulong InteractsAs { get; }
+    public ulong InteractsWith { get; }
+    public ulong InteractsExclude { get; }
+    public byte CollisionFunctionMask { get; }
+  }
+
+  public record SoulOrbOneChangeConstants : ISoulOrbOneChangeConstants
+  {
     public required ulong InteractsAs { get; init; }
     public static readonly List<ulong> PlaceholderInteractsAsValues = [131072, 4297195520, 2149711872];
     public static readonly List<ulong> PermittedInteractsAsValues = [8800390217728, 8798242734080];
@@ -44,17 +62,8 @@ namespace DeadlockDemoResearch.DataModels
     public const byte PlaceholderCollisionFunctionMask = 0;
     public const byte PermittedCollisionFunctionMask = 7;
 
-    public static SoulOrbConstants CopyFrom(ISoulOrbConstants other) => new()
+    public static SoulOrbOneChangeConstants CopyFrom(ISoulOrbOneChangeConstants other) => new()
     {
-      EntityIndex = other.EntityIndex,
-      Subclass = other.Subclass,
-      InterpolationFrame = other.InterpolationFrame,
-      CreateTime = other.CreateTime,
-      Team = other.Team,
-      TimeLaunch = other.TimeLaunch,
-      AttackableTime = other.AttackableTime,
-      LaunchNum = other.LaunchNum,
-
       InteractsAs = other.InteractsAs,
       InteractsWith = other.InteractsWith,
       InteractsExclude = other.InteractsExclude,
@@ -80,7 +89,7 @@ namespace DeadlockDemoResearch.DataModels
     };
   }
 
-  public class SoulOrbView : ISoulOrbConstants, ISoulOrbVariables
+  public class SoulOrbView : ISoulOrbConstants, ISoulOrbOneChangeConstants, ISoulOrbVariables
   {
     public required DeadlockDemo.CItemXP Entity { get; init; }
 
@@ -119,29 +128,33 @@ namespace DeadlockDemoResearch.DataModels
     {
       View = view;
       if (!View.AllAccessible() || !View.ConstantsValid()) throw new Exception(nameof(View));
-      FirstFrameConstants = SoulOrbConstants.CopyFrom(view);
+      Constants = SoulOrbConstants.CopyFrom(View);
+      FirstFrameOneChangeConstants = SoulOrbOneChangeConstants.CopyFrom(View);
     }
 
     public SoulOrbView View { get; private init; }
-    public SoulOrbConstants FirstFrameConstants { get; private init; }
-    public (uint iFrame, SoulOrbConstants constants)? SubsequentConstants { get; private set; } = null;
+    public SoulOrbConstants Constants { get; private init; }
+    public SoulOrbOneChangeConstants FirstFrameOneChangeConstants { get; private init; }
+    public (uint iFrame, SoulOrbOneChangeConstants oneChangeConstants)? SubsequentOneChangeConstants { get; private set; } = null;
     public List<(uint iFrame, EEntityPvsState pvsState, SoulOrbVariables variables)> VariableHistory { get; } = [];
 
     public void AfterFrame(Frame previousFrame, Frame currentFrame, float gameStartTime, EEntityPvsState pvsState)
     {
       if (!View.AllAccessible() || !View.VariablesValid()) throw new Exception();
 
-      var frameConstants = SoulOrbConstants.CopyFrom(View);
-      if (SubsequentConstants == null)
+      if (SoulOrbConstants.CopyFrom(View) != Constants) throw new Exception();
+
+      var frameOneChangeConstants = SoulOrbOneChangeConstants.CopyFrom(View);
+      if (SubsequentOneChangeConstants == null)
       {
-        if (frameConstants != FirstFrameConstants)
+        if (frameOneChangeConstants != FirstFrameOneChangeConstants)
         {
-          SubsequentConstants = (currentFrame.iFrame, frameConstants);
+          SubsequentOneChangeConstants = (currentFrame.iFrame, frameOneChangeConstants);
         }
       }
       else
       {
-        if (frameConstants != SubsequentConstants.Value.constants) throw new Exception();
+        if (frameOneChangeConstants != SubsequentOneChangeConstants.Value.oneChangeConstants) throw new Exception();
       }
 
       var frameVariables = SoulOrbVariables.CopyFrom(View);
@@ -165,13 +178,13 @@ namespace DeadlockDemoResearch.DataModels
       }
 
       var simulationGameClockTime = currentFrame.GameClockTime - (currentFrame.GameTickTime - frameVariables.SimulationTime);
-      var launchSimulationGameClockTime = FirstFrameConstants.TimeLaunch - gameStartTime;
+      var launchSimulationGameClockTime = Constants.TimeLaunch - gameStartTime;
 
       if (VariableHistory.Count == 0)
       {
         var launchDelay = launchSimulationGameClockTime - simulationGameClockTime;
-        var attackableDelay = FirstFrameConstants.AttackableTime - FirstFrameConstants.TimeLaunch;
-        if (FirstFrameConstants.Subclass is (ESoulOrbSubclassId.SoulOrbFountain or ESoulOrbSubclassId.SoulOrbTrooper))
+        var attackableDelay = Constants.AttackableTime - Constants.TimeLaunch;
+        if (Constants.Subclass is (ESoulOrbSubclassId.SoulOrbFountain or ESoulOrbSubclassId.SoulOrbTrooper))
         {
           if (!(launchDelay >= 0.4f && launchDelay <= 0.7f)) throw new Exception();
           if (!(MathF.Abs(attackableDelay - 0.2f) < 0.001f)) throw new Exception();

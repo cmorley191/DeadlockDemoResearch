@@ -1375,9 +1375,10 @@ namespace DeadlockDemoResearch
               soulOrbs.Values
               .Select(t => new
               {
-                FirstFrameConstants = t.FirstFrameConstants,
-                SubsequentConstants = t.SubsequentConstants?.constants,
-                SubsequentConstantsIFrame = t.SubsequentConstants?.iFrame ?? 0,
+                Constants = t.Constants,
+                FirstFrameOneChangeConstants = t.FirstFrameOneChangeConstants,
+                SubsequentOneChangeConstants = t.SubsequentOneChangeConstants?.oneChangeConstants,
+                SubsequentOneChangeConstantsIFrame = t.SubsequentOneChangeConstants?.iFrame ?? 0,
                 Variables = t.VariableHistory.Select(v => new { v.iFrame, v.pvsState, v.variables }),
               })
               .ToList()
