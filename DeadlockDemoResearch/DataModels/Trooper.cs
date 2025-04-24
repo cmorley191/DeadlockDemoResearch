@@ -356,8 +356,28 @@ namespace DeadlockDemoResearch.DataModels
                     && (
                       ActiveTrooper.Value.trooper.VariableHistory.Count == 1
                       || (
-                        ActiveTrooper.Value.trooper.VariableHistory[1].variables.Position == ActiveTrooper.Value.trooper.VariableHistory[0].variables.Position
+                        ActiveTrooper.Value.trooper.VariableHistory.Count == 2
+                        && ActiveTrooper.Value.trooper.VariableHistory[0].pvsState == EEntityPvsState.Active 
+                        && !ActiveTrooper.Value.trooper.VariableHistory[0].variables.IsAlive
                         && ActiveTrooper.Value.trooper.VariableHistory[1].pvsState == EEntityPvsState.InactiveButPresent
+                        && !ActiveTrooper.Value.trooper.VariableHistory[1].variables.IsAlive
+                        && ActiveTrooper.Value.trooper.VariableHistory[1].variables.Position == ActiveTrooper.Value.trooper.VariableHistory[0].variables.Position
+                      )
+                      || (
+                        ActiveTrooper.Value.trooper.VariableHistory[0].pvsState == EEntityPvsState.Active
+                        && ActiveTrooper.Value.trooper.VariableHistory[0].variables.IsAlive
+                        && ActiveTrooper.Value.trooper.VariableHistory[1].pvsState == EEntityPvsState.Active
+                        && !ActiveTrooper.Value.trooper.VariableHistory[1].variables.IsAlive
+                        && Vector3.DistanceSquared(ActiveTrooper.Value.trooper.VariableHistory[0].variables.Position, ActiveTrooper.Value.trooper.VariableHistory[1].variables.Position) <= 10f * 10f
+                        && (
+                          ActiveTrooper.Value.trooper.VariableHistory.Count == 2
+                          || (
+                            ActiveTrooper.Value.trooper.VariableHistory.Count == 3
+                            && ActiveTrooper.Value.trooper.VariableHistory[2].pvsState == EEntityPvsState.InactiveButPresent
+                            && !ActiveTrooper.Value.trooper.VariableHistory[2].variables.IsAlive
+                            && ActiveTrooper.Value.trooper.VariableHistory[2].variables.Position == ActiveTrooper.Value.trooper.VariableHistory[1].variables.Position
+                          )
+                        )
                       )
                     )
                   )) throw new Exception(nameof(EUnifiedTrooperState.Unpacked_InactiveBuggedFellOutOfWorld));

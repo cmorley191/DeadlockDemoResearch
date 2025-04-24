@@ -75,6 +75,7 @@ namespace DeadlockDemoResearch.DataModels
     public bool IsFrozenByKelvinUlt { get; }
     public bool HasBackdoorProtection { get; }
     public int Health { get; }
+    public bool IsAlive { get; }
   }
 
   public record TowerVariables : ITowerVariables
@@ -86,6 +87,7 @@ namespace DeadlockDemoResearch.DataModels
     public required bool IsFrozenByKelvinUlt { get; init; }
     public required bool HasBackdoorProtection { get; init; }
     public required int Health { get; init; }
+    public required bool IsAlive { get; init; }
 
     public static TowerVariables CopyFrom(ITowerVariables other) => new()
     {
@@ -96,6 +98,7 @@ namespace DeadlockDemoResearch.DataModels
       IsFrozenByKelvinUlt = other.IsFrozenByKelvinUlt,
       HasBackdoorProtection = other.HasBackdoorProtection,
       Health = other.Health,
+      IsAlive = other.IsAlive,
     };
   }
 
@@ -169,10 +172,12 @@ namespace DeadlockDemoResearch.DataModels
         : stateMaskZero(modifierProp.EnabledStateMask)
       );
     public int Health => Entity.Health;
+    // After death, the health can just increase for no reason (sometimes from 0 to 1, sometimes from 1 to random other values)
     // Would like to check:
     // && (Entity.MaxHealth == 0 || Entity.Health <= Entity.MaxHealth)
     // but when max health increases in game, Health can actually increase *first* for a few frames before MaxHealth is updated
-    private bool healthValid() => Entity.IsAlive ? Entity.Health > 0 : Entity.Health == 0;
+    private bool healthValid() => !Entity.IsAlive || Entity.Health > 0;
+    public bool IsAlive => Entity.IsAlive;
 
 
     public bool AllAccessible() => modifierPropAccessible() && statesAccessible();
@@ -206,7 +211,7 @@ namespace DeadlockDemoResearch.DataModels
         && (!deleted || frameVariables != VariableHistory[^1].variables)
       ) throw new Exception($"{frame}: variables changed on deleted tower {View.Entity.EntityIndex.Value}");
 
-      if (deleted && frameVariables.Health > 0) throw new Exception(nameof(deleted));
+      if (deleted && frameVariables.IsAlive) throw new Exception(nameof(deleted));
 
       if (
         VariableHistory.Count == 0

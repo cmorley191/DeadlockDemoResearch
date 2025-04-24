@@ -1,11 +1,9 @@
 ﻿using DeadlockDemoResearch.DataModels;
 using GraphAlgorithms;
-using System.Buffers;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime;
 using System.Text.Json;
-using static CMsgServerNetworkStats.Types;
 using DeadlockDemo = DemoFile.Game.Deadlock;
 
 namespace DeadlockDemoResearch
@@ -105,6 +103,8 @@ namespace DeadlockDemoResearch
       UnifiedUrnHistory? activeUrn = null;
 
       var soulOrbs = new Dictionary<DeadlockDemo.CItemXP, SoulOrbHistory>();
+
+      var shrines = new Dictionary<DeadlockDemo.CCitadel_Destroyable_Building, ShrineHistory>();
 
       void AfterFrame()
       {
@@ -338,7 +338,7 @@ namespace DeadlockDemoResearch
               )
             )) throw new Exception(nameof(bornActiveTroopers));
 
-            if (diedZiplineTroopers.Count == 1)
+            if (diedZiplineTroopers.Count == 1 && bornActiveTroopers.Count == 1)
             {
               diedZiplineTroopers[0].ut.SetActiveTrooper(bornActiveTroopers[0]);
               continue;
@@ -469,10 +469,27 @@ namespace DeadlockDemoResearch
         }
 
         {
-          foreach (var shrine in demo.Entities.OfType<DeadlockDemo.CCitadel_Destroyable_Building>()) // no, compiler, this won't result in an empty sequence you dummy
+          bool shrinesFoundPreviously = shrines.Count > 0;
+          var seenShrines = new HashSet<ShrineHistory>();
+          foreach (var shrineEntity in demo.Entities.OfType<DeadlockDemo.CCitadel_Destroyable_Building>()) // no, compiler, this won't result in an empty sequence you dummy
           {
-            // note: check cellX to determine the side?
-            // 28 is near yellow, 34 near purple
+            if (shrinesFoundPreviously != shrines.TryGetValue(shrineEntity, out var existingHistory)) throw new Exception();
+            if (!shrinesFoundPreviously)
+            {
+              existingHistory = new ShrineHistory(new ShrineView { Entity = shrineEntity });
+              shrines.Add(shrineEntity, existingHistory);
+            }
+            if (existingHistory == null) throw new NullReferenceException(); // this should never happen
+
+            if (!shrineEntity.IsActive) throw new Exception();
+            if (seenShrines.Contains(existingHistory)) throw new Exception();
+            seenShrines.Add(existingHistory);
+            existingHistory.AfterFrame(frame);
+          }
+
+          foreach (var shrine in shrines)
+          {
+            if (!seenShrines.Contains(shrine.Value)) throw new Exception();
           }
         }
 
@@ -1129,6 +1146,8 @@ namespace DeadlockDemoResearch
       if (walkers.Count != 2 /*teams*/ * 3 /*lanes*/) throw new Exception(nameof(towers));
       // urn dropoff spot count checked in AfterFrame
 
+      if (shrines.Count != 2 /*teams*/ * 2 /*shrines*/) throw new Exception(nameof(shrines));
+
       const int replayViewerTimelinePixels = 960;
       const int replayViewerTimelineSliderWidthPixels = 6;
       const int replayViewerTimelineSeekPixelOffset = -(replayViewerTimelineSliderWidthPixels / 2);
@@ -1161,7 +1180,7 @@ namespace DeadlockDemoResearch
 
         Console.WriteLine();
         Console.WriteLine($">>>> Enter a command: quit, meta, break, go_frame, go_demo, go_game, go_game_time(s,t), go_replay_time(s,t), player(i), "
-                          + $"dump_players, dump_troopers, dump_towers, dump_walkers, dump_urns, dump_orbs");
+                          + $"dump_players, dump_troopers, dump_towers, dump_walkers, dump_urns, dump_orbs, dump_shrines");
         // not shown: dump_partial_troopers
 
         var command = Console.ReadLine();
@@ -1401,6 +1420,26 @@ namespace DeadlockDemoResearch
                 SubsequentOneChangeConstants = t.SubsequentOneChangeConstants?.oneChangeConstants,
                 SubsequentOneChangeConstantsIFrame = t.SubsequentOneChangeConstants?.iFrame ?? 0,
                 Variables = t.VariableHistory.Select(v => new { v.iFrame, v.pvsState, v.variables }),
+              })
+              .ToList()
+            )
+          );
+          Console.WriteLine($"Wrote to {filename}");
+          ReleaseUnusedMemoryNow();
+          continue;
+        }
+
+        if (command == "dump_shrines")
+        {
+          var filename = $"{matchId}_shrines.json";
+          await File.WriteAllTextAsync(
+            filename,
+            SerializeJsonObject(
+              shrines.Values
+              .Select(t => new
+              {
+                Constants = t.Constants,
+                Variables = t.VariableHistory.Select(v => new { v.iFrame, v.variables }),
               })
               .ToList()
             )
